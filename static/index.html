@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlantAssist</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <i data-lucide="leaf" class="logo-icon"></i>
+        <span>PlantAssist</span>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="sidebar-nav-btn active" data-view="today">
+          <i data-lucide="sun" class="nav-icon"></i>
+          <span class="nav-label">Сегодня</span>
+        </button>
+        <button class="sidebar-nav-btn" data-view="all">
+          <i data-lucide="grid-2x2" class="nav-icon"></i>
+          <span class="nav-label">Растения</span>
+        </button>
+        <button class="sidebar-nav-btn" data-view="calendar">
+          <i data-lucide="calendar-days" class="nav-icon"></i>
+          <span class="nav-label">Уход</span>
+        </button>
+        <button class="sidebar-nav-btn" data-view="cuttings">
+          <i data-lucide="scissors" class="nav-icon"></i>
+          <span class="nav-label">Черенки</span>
+        </button>
+        <button class="sidebar-nav-btn" data-view="archive">
+          <i data-lucide="archive" class="nav-icon"></i>
+          <span class="nav-label">Архив</span>
+        </button>
+        <button class="sidebar-nav-btn" data-view="achievements">
+          <i data-lucide="trophy" class="nav-icon"></i>
+          <span class="nav-label">Достижения</span>
+        </button>
+        <button class="sidebar-nav-btn" data-view="stats">
+          <i data-lucide="bar-chart-2" class="nav-icon"></i>
+          <span class="nav-label">Статистика</span>
+        </button>
+      </nav>
+      <div class="sidebar-bottom">
+        <button id="theme-toggle" class="theme-toggle-btn" title="Тёмная тема">
+          <i data-lucide="moon" class="nav-icon"></i>
+          <span class="nav-label">Тёмная тема</span>
+        </button>
+      </div>
+    </aside>
+
+    <main>
+      <!-- Вид "Сегодня" -->
+      <div id="view-today" class="view active">
+        <div class="view-header">
+          <div>
+            <h2 class="view-title">Доброе утро 🌿</h2>
+            <p class="view-subtitle" id="today-date-label"></p>
+          </div>
+          <button class="btn-secondary" id="btn-bulk-action">
+            <i data-lucide="list-checks" style="width:15px;height:15px;"></i>
+            Всем сразу
+          </button>
+        </div>
+        <div id="today-empty" class="empty-state" style="display:none">
+          <div class="empty-icon">🌱</div>
+          <p class="empty-title">Все растения в порядке!</p>
+          <p class="empty-sub">Наслаждайтесь своей коллекцией</p>
+        </div>
+        <div id="today-list" class="today-list"></div>
+      </div>
+
+      <!-- Вид "Все растения" -->
+      <div id="view-all" class="view">
+        <div class="view-header">
+          <div>
+            <h2 class="view-title">Моя коллекция</h2>
+            <p class="view-subtitle" id="plants-stats"></p>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div class="search-wrap">
+              <i data-lucide="search" class="search-icon"></i>
+              <input type="search" id="plants-search" placeholder="Поиск..." class="plants-search-input">
+            </div>
+            <button class="btn-primary" id="btn-add-plant">
+              <i data-lucide="plus" style="width:15px;height:15px;"></i>
+              Добавить
+            </button>
+          </div>
+        </div>
+        <div id="plants-empty" class="empty-state" style="display:none">
+          <div class="empty-icon">🪴</div>
+          <p class="empty-title">Коллекция пуста</p>
+          <p class="empty-sub">Добавьте первое растение, чтобы начать</p>
+        </div>
+        <div id="room-filter-bar" class="filter-bar" style="display:none;"></div>
+        <div id="type-filter-bar" class="filter-bar"></div>
+        <div class="sort-bar">
+          <span class="sort-label">Сортировка:</span>
+          <button class="sort-btn active" data-sort="watering">💧 Полив</button>
+          <button class="sort-btn" data-sort="fertilizing">🌱 Подкормка</button>
+          <button class="sort-btn" data-sort="repotting">🪴 Пересадка</button>
+          <button class="sort-btn" data-sort="purchased_date">🛒 Покупка</button>
+        </div>
+        <div id="plants-grid" class="plants-grid"></div>
+      </div>
+
+      <!-- Черенки -->
+      <div id="view-cuttings" class="view">
+        <div class="view-header">
+          <div>
+            <h2 class="view-title">Черенки</h2>
+            <p class="view-subtitle">Трекер укоренения</p>
+          </div>
+          <button class="btn-primary" id="btn-add-cutting">
+            <i data-lucide="plus" style="width:15px;height:15px;"></i>
+            Добавить черенок
+          </button>
+        </div>
+        <div id="cuttings-empty" class="empty-state" style="display:none">
+          <div class="empty-icon">✂️</div>
+          <p class="empty-title">Нет черенков</p>
+          <p class="empty-sub">Добавьте первый черенок</p>
+        </div>
+        <div id="cuttings-list" class="cuttings-list"></div>
+      </div>
+
+      <!-- Архив -->
+      <div id="view-archive" class="view">
+        <div class="view-header">
+          <div>
+            <h2 class="view-title">Архив</h2>
+            <p class="view-subtitle">Ушедшие растения</p>
+          </div>
+        </div>
+        <div id="archive-empty" class="empty-state" style="display:none">
+          <div class="empty-icon">📦</div>
+          <p class="empty-title">Архив пуст</p>
+          <p class="empty-sub">Здесь будут растения, которые вы убрали из коллекции</p>
+        </div>
+        <div id="archive-list" class="plants-grid"></div>
+      </div>
+
+      <!-- Календарь -->
+      <div id="view-calendar" class="view">
+        <div class="view-header">
+          <div>
+            <h2 class="view-title">План ухода</h2>
+            <p class="view-subtitle">Расписание на ближайшие 30 дней</p>
+          </div>
+        </div>
+        <div id="calendar-container" class="calendar-container"></div>
+      </div>
+
+      <!-- Достижения -->
+      <div id="view-achievements" class="view">
+        <div class="view-header">
+          <div>
+            <h2 class="view-title">Достижения</h2>
+            <p class="view-subtitle" id="achievements-subtitle">Разблокируй их все</p>
+          </div>
+        </div>
+        <div id="achievements-container"></div>
+      </div>
+
+      <!-- Статистика -->
+      <div id="view-stats" class="view">
+        <div class="view-header">
+          <div>
+            <h2 class="view-title">Статистика</h2>
+            <p class="view-subtitle">Обзор коллекции</p>
+          </div>
+        </div>
+        <div id="stats-container"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Модальное окно: добавить/редактировать растение -->
+  <div id="modal-plant" class="modal" style="display:none">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">Новое растение</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="plant-form" class="plant-form">
+        <input type="hidden" id="form-id">
+
+        <div class="form-section">
+          <h4>Основное</h4>
+          <div class="form-group">
+            <label>Название *</label>
+            <input type="text" id="form-name" required placeholder="Фикус, Монстера...">
+          </div>
+          <div class="form-group">
+            <label>Описание / заметки</label>
+            <textarea id="form-description" rows="3" placeholder="Сорт, особенности ухода..."></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Дата покупки</label>
+              <input type="date" id="form-purchased">
+            </div>
+            <div class="form-group">
+              <label>Комната</label>
+              <div id="form-room-wrap"></div>
+            </div>
+          </div>
+          <div class="form-row form-checks-row">
+            <label class="form-check-label">
+              <input type="checkbox" id="form-favorited" class="form-check-input">
+              ❤️ Избранное
+            </label>
+            <label class="form-check-label">
+              <input type="checkbox" id="form-is-flowering" class="form-check-input">
+              🌸 Цветёт
+            </label>
+          </div>
+          <div class="form-group">
+            <label>Тип растения</label>
+            <div id="form-plant-types-chips" class="form-type-chips"></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h4>Условия содержания</h4>
+          <div class="form-group">
+            <label>Полив</label>
+            <select id="form-watering-note">
+              <option value="">— не задано —</option>
+              <option value="Весь ком просыхает">Весь ком просыхает</option>
+              <option value="Верхняя треть просыхает">Верхняя треть просыхает</option>
+              <option value="Верхние 1–2 см просыхают">Верхние 1–2 см просыхают</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Свет</label>
+            <select id="form-light">
+              <option value="">— не задано —</option>
+              <option value="Прямое солнце">Прямое солнце ☀️</option>
+              <option value="Яркий рассеянный">Яркий рассеянный 🌤</option>
+              <option value="Средний">Средний 🌥</option>
+              <option value="Тень">Тень 🌑</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Грунт</label>
+            <div id="form-soil-wrap"></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h4>Полив</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Последний полив</label>
+              <input type="date" id="form-water-last">
+            </div>
+            <div class="form-group">
+              <label>Периодичность (дней)</label>
+              <input type="number" id="form-water-freq" min="1" max="365" placeholder="не задано">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h4>Подкормка</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Последняя подкормка</label>
+              <input type="date" id="form-fert-last">
+            </div>
+            <div class="form-group">
+              <label>Периодичность (дней)</label>
+              <input type="number" id="form-fert-freq" min="1" max="365" value="30">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h4>Пересадка</h4>
+          <div class="form-group">
+            <label>Последняя пересадка</label>
+            <input type="date" id="form-repot-last">
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.9rem;margin-top:4px;">
+            <input type="checkbox" id="form-needs-repotting" style="width:16px;height:16px;accent-color:var(--sage);">
+            Требуется пересадка
+          </label>
+        </div>
+
+        <div class="form-section">
+          <h4>Обработка от вредителей</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Последняя обработка</label>
+              <input type="date" id="form-pest-last">
+            </div>
+            <div class="form-group">
+              <label>Повторять через (дней)</label>
+              <input type="number" id="form-pest-freq" min="1" max="365" placeholder="не задано">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h4>Витамины и стимуляторы</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Последние витамины</label>
+              <input type="date" id="form-vitamins-last">
+            </div>
+            <div class="form-group">
+              <label>Повторять через (дней)</label>
+              <input type="number" id="form-vitamins-freq" min="1" max="365" placeholder="не задано">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h4>Вредители и болезни</h4>
+          <div id="form-problems-chips" class="form-type-chips"></div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-secondary modal-close-btn">Отмена</button>
+          <button type="submit" class="btn-primary">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Модальное окно: детали растения -->
+  <div id="modal-detail" class="modal" style="display:none">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-detail-content">
+      <div class="modal-header">
+        <h3 id="detail-name">Растение</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div id="detail-body" class="detail-body">
+        <!-- заполняется JS -->
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    // Init Lucide icons after DOM is ready (app.js may add more icons dynamically)
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      // Set today label
+      const el = document.getElementById('today-date-label');
+      if (el) {
+        const d = new Date();
+        const opts = { weekday: 'long', day: 'numeric', month: 'long' };
+        el.textContent = d.toLocaleDateString('ru-RU', opts);
+      }
+    });
+  </script>
+</body>
+</html>
