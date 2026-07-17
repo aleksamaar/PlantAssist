@@ -2051,6 +2051,79 @@ document.querySelectorAll('.sidebar-nav-btn').forEach(btn => {
   });
 });
 
+// ── Mobile "Ещё" sheet ────────────────────────────────────────────────────────
+// The bottom bar only fits ~5 items, so secondary views live in a sheet.
+const MORE_VIEWS = ['cuttings', 'archive', 'achievements', 'stats'];
+
+function syncMoreActive() {
+  const btn = document.getElementById('btn-nav-more');
+  if (btn) btn.classList.toggle('active', MORE_VIEWS.includes(currentView));
+}
+document.querySelectorAll('.sidebar-nav-btn').forEach(b =>
+  b.addEventListener('click', syncMoreActive));
+
+function openMoreSheet() {
+  const existing = document.getElementById('more-sheet');
+  if (existing) existing.remove();
+
+  const sheet = document.createElement('div');
+  sheet.className = 'sheet';
+  sheet.id = 'more-sheet';
+
+  const close = () => {
+    sheet.classList.add('closing');
+    setTimeout(() => sheet.remove(), 220);
+  };
+
+  const overlay = document.createElement('div');
+  overlay.className = 'sheet-overlay';
+  overlay.addEventListener('click', close);
+
+  const panel = document.createElement('div');
+  panel.className = 'sheet-panel';
+
+  const isDark = document.body.classList.contains('dark');
+  const items = MORE_VIEWS.map(v => {
+    const src = document.querySelector(`.sidebar-nav-btn[data-view="${v}"]`);
+    return {
+      view: v,
+      label: src?.querySelector('.nav-label')?.textContent || v,
+      icon: { cuttings: 'scissors', archive: 'archive', achievements: 'trophy', stats: 'bar-chart-2' }[v],
+    };
+  });
+
+  panel.innerHTML = `
+    <div class="sheet-handle"></div>
+    <div class="sheet-grid">
+      ${items.map(i => `
+        <button class="sheet-item ${currentView === i.view ? 'active' : ''}" data-view="${i.view}">
+          <i data-lucide="${i.icon}"></i><span>${i.label}</span>
+        </button>`).join('')}
+    </div>
+    <button class="sheet-theme" id="sheet-theme">
+      <i data-lucide="${isDark ? 'sun' : 'moon'}"></i>
+      <span>${isDark ? 'Светлая тема' : 'Тёмная тема'}</span>
+    </button>`;
+
+  panel.querySelectorAll('.sheet-item').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelector(`.sidebar-nav-btn[data-view="${item.dataset.view}"]`)?.click();
+      close();
+    });
+  });
+  panel.querySelector('#sheet-theme').addEventListener('click', () => {
+    document.getElementById('theme-toggle')?.click();
+    close();
+  });
+
+  sheet.appendChild(overlay);
+  sheet.appendChild(panel);
+  document.body.appendChild(sheet);
+  if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [panel] });
+}
+
+document.getElementById('btn-nav-more')?.addEventListener('click', openMoreSheet);
+
 document.querySelectorAll('.sort-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));

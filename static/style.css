@@ -1824,12 +1824,73 @@ body.dark .backup-card { background: #1C1C1A; }
 
 body.dark .sowing-status-pill { background: rgba(40,40,38,0.92); color: var(--text); }
 
+/* ── Mobile "Ещё" sheet ───────────────────────────────────────────────────── */
+.nav-more-btn { display: none; }
+
+.sheet { position: fixed; inset: 0; z-index: 300; display: flex; align-items: flex-end; }
+.sheet-overlay {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.4);
+  animation: sheetFade 0.22s ease forwards;
+}
+.sheet-panel {
+  position: relative;
+  width: 100%;
+  background: var(--white);
+  border-radius: 22px 22px 0 0;
+  padding: 8px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+  animation: sheetUp 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.sheet.closing .sheet-panel { animation: sheetDown 0.2s ease forwards; }
+.sheet.closing .sheet-overlay { animation: sheetFadeOut 0.2s ease forwards; }
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes sheetDown { from { transform: translateY(0); } to { transform: translateY(100%); } }
+@keyframes sheetFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sheetFadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+.sheet-handle {
+  width: 38px; height: 4px; border-radius: 2px;
+  background: var(--border);
+  margin: 6px auto 16px;
+}
+.sheet-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.sheet-item {
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  padding: 14px 4px;
+  border: none; border-radius: 14px;
+  background: var(--gray-light);
+  color: var(--text);
+  font-size: 0.7rem; font-weight: 600; font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.sheet-item svg { width: 22px; height: 22px; stroke-width: 2; }
+.sheet-item:active { transform: scale(0.94); }
+.sheet-item.active { background: var(--sage-light); color: var(--sage-dark); }
+.sheet-theme {
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  width: 100%; margin-top: 10px; padding: 14px;
+  border: 1px solid var(--border); border-radius: 14px;
+  background: none; color: var(--text-muted);
+  font-size: 0.85rem; font-weight: 600; font-family: inherit;
+  cursor: pointer;
+}
+.sheet-theme svg { width: 18px; height: 18px; }
+.sheet-theme:active { background: var(--gray-light); }
+body.dark .sheet-panel { background: #1C1C1A; }
+body.dark .sheet-item { background: #252522; }
+
 /* ── Mobile ───────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  /* Bottom tab bar with iPhone safe-area */
+  /* Kill the blue tap flash — we provide our own press feedback */
+  * { -webkit-tap-highlight-color: transparent; }
+  body { overscroll-behavior-y: none; }
+
+  /* Bottom tab bar: 4 primary + "Ещё". Secondary views move into the sheet. */
   .sidebar {
     width: 100%;
-    height: calc(58px + env(safe-area-inset-bottom, 0px));
+    height: calc(60px + env(safe-area-inset-bottom, 0px));
     padding-bottom: env(safe-area-inset-bottom, 0px);
     position: fixed;
     bottom: 0; top: unset;
@@ -1837,79 +1898,154 @@ body.dark .sowing-status-pill { background: rgba(40,40,38,0.92); color: var(--te
     border-top: 1px solid var(--border);
     border-right: none;
     z-index: 200;
+    /* Frosted bar, like modern iOS/Android apps (solid fallback first) */
+    background: var(--white);
+    background: color-mix(in srgb, var(--white) 88%, transparent);
+    backdrop-filter: saturate(180%) blur(14px);
+    -webkit-backdrop-filter: saturate(180%) blur(14px);
   }
-  .sidebar-logo { display: none; }
+  .sidebar-logo, .sidebar-bottom { display: none; }
   .sidebar-nav {
     flex-direction: row;
-    padding: 4px 2px;
-    gap: 0;
+    padding: 6px 4px 4px;
+    gap: 2px;
     width: 100%;
-    overflow-x: auto;
-    scrollbar-width: none;
+    overflow: visible; /* 5 items always fit — no scrolling bar */
   }
-  .sidebar-nav::-webkit-scrollbar { display: none; }
-  .sidebar-nav-btn {
+  /* Secondary views live in the "Ещё" sheet */
+  .sidebar-nav-btn[data-view="cuttings"],
+  .sidebar-nav-btn[data-view="archive"],
+  .sidebar-nav-btn[data-view="achievements"],
+  .sidebar-nav-btn[data-view="stats"] { display: none; }
+
+  .sidebar-nav-btn, .nav-more-btn {
+    display: flex;
     flex-direction: column;
-    gap: 3px;
-    font-size: 0.58rem;
-    border-radius: var(--radius-xs);
-    flex: 1;
-    min-width: 48px;
-    padding: 6px 2px;
+    align-items: center;
     justify-content: center;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+    padding: 6px 2px;
+    border: none;
+    background: none;
+    font-family: inherit;
+    font-size: 0.62rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 12px;
+    transition: color 0.15s, transform 0.1s;
   }
+  .sidebar-nav-btn:active, .nav-more-btn:active { transform: scale(0.9); }
   .sidebar-nav-btn.active::before { display: none; } /* no left bar in bottom nav */
-  .sidebar-nav-btn .nav-icon { width: 20px; height: 20px; }
-  .sidebar-bottom { display: none; }
+  .sidebar-nav-btn:hover:not(.active) { background: none; } /* hover is meaningless on touch */
+  .sidebar-nav-btn .nav-icon, .nav-more-btn .nav-icon { width: 22px; height: 22px; stroke-width: 2; }
+  /* Active tab: filled pill behind the icon */
+  .sidebar-nav-btn.active, .nav-more-btn.active { color: var(--sage-dark); background: none; }
+  .sidebar-nav-btn.active .nav-icon, .nav-more-btn.active .nav-icon {
+    background: var(--sage-light);
+    border-radius: 12px;
+    padding: 3px 14px;
+    width: 46px;
+    box-sizing: content-box;
+  }
+  .nav-more-btn { display: flex; }
 
   main {
     margin-left: 0;
-    margin-bottom: calc(58px + env(safe-area-inset-bottom, 0px));
-    padding: 14px 14px 20px;
+    margin-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+    padding: 12px 14px 24px;
+    -webkit-overflow-scrolling: touch;
   }
-  .view-header { flex-direction: column; align-items: flex-start; gap: 12px; }
-  .view-title { font-size: 1.3rem; }
+  .view-header { flex-direction: column; align-items: stretch; gap: 12px; margin-bottom: 14px; }
+  .view-title { font-size: 1.45rem; letter-spacing: -0.6px; }
+  .view-subtitle { font-size: 0.8rem; }
 
-  /* Two-column card grid on phones */
-  .plants-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .plant-photo, .plant-photo-placeholder { height: 130px; }
-  .plant-name { font-size: 0.85rem; }
+  /* Two-column card grid */
+  .plants-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .plant-photo, .plant-photo-placeholder { height: 140px; }
+  .plant-body { padding: 10px 11px 8px; }
+  .plant-name { font-size: 0.86rem; }
+  .plant-card:active { transform: scale(0.97); }
   .card-action-label { display: none; } /* icon-only quick actions to save space */
-  .card-action-btn { padding: 10px 6px; }
-  .card-action-icon { font-size: 1.1rem; }
+  .card-action-btn { padding: 11px 6px; }
+  .card-action-icon { font-size: 1.15rem; }
+  .card-action-btn:active { background: var(--sage-light); }
+  .card-heart-btn { width: 34px; height: 34px; } /* comfortable thumb target */
 
-  /* Full-screen modals */
+  /* Modals as bottom sheets — the modern mobile pattern */
+  .modal { align-items: flex-end; }
   .modal-content {
     margin: 0;
     max-width: 100%;
     width: 100%;
-    height: 100%;
-    max-height: 100%;
-    border-radius: 0;
+    max-height: 92vh;
+    border-radius: 20px 20px 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    animation: sheetUp 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    overscroll-behavior: contain;
   }
-  .modal-header { padding: 16px 16px 14px; padding-top: calc(14px + env(safe-area-inset-top, 0px)); }
+  /* Grab handle — lives in the sticky header so it stays visible while scrolling */
+  .modal-header { padding: 18px 16px 14px; }
+  .modal-header::before {
+    content: '';
+    position: absolute;
+    top: 7px; left: 50%;
+    transform: translateX(-50%);
+    width: 38px; height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+  }
+  .modal-header h3 { font-size: 1.05rem; }
   .modal-close { width: 36px; height: 36px; font-size: 1.3rem; }
   .plant-form { padding: 16px; }
+  .detail-body { padding: 0 16px 16px; }
+  /* Stack paired fields — full-width inputs read better on narrow screens.
+     .form-group already carries margin-bottom, so gap goes to 0. */
+  .form-row { grid-template-columns: 1fr; gap: 0; }
+  /* ...but keep the checkbox pair side by side — they're short */
+  .form-checks-row { grid-template-columns: 1fr 1fr; gap: 16px; }
 
-  /* Bigger tap targets */
-  .btn-primary, .btn-secondary, .btn-danger { padding: 11px 16px; }
-  input, select, textarea { font-size: 16px !important; } /* prevents iOS zoom on focus */
+  /* Comfortable tap targets + no iOS zoom on focus */
+  .btn-primary, .btn-secondary, .btn-danger { padding: 12px 16px; min-height: 44px; }
+  .btn-primary:active, .btn-secondary:active, .btn-danger:active { transform: scale(0.96); }
+  input, select, textarea { font-size: 16px !important; padding: 11px 13px; }
+  .type-chip, .sort-btn, .type-filter-btn { padding: 8px 13px; }
+  .task-chip { padding: 9px 13px; }
 
-  /* Search full width */
-  .search-wrap { width: 100%; }
-  .plants-search-input { width: 100%; }
+  .search-wrap, .plants-search-input { width: 100%; }
 
-  /* Today summary + KPI rows scroll horizontally */
-  .cal-kpi-row { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
-  .cal-kpi-row::-webkit-scrollbar { display: none; }
-  .cal-kpi-chip { flex: 0 0 auto; min-width: 130px; }
+  /* Horizontal scrollers */
+  .cal-kpi-row, .sort-bar, .filter-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .cal-kpi-row::-webkit-scrollbar,
+  .sort-bar::-webkit-scrollbar,
+  .filter-bar::-webkit-scrollbar { display: none; }
+  .cal-kpi-chip { flex: 0 0 auto; min-width: 132px; }
+  .sort-btn, .type-filter-btn { flex: 0 0 auto; }
 
-  /* Achievements grid tighter */
   .achievements-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .today-plant { padding: 12px; }
+  .toast-card { padding: 28px 32px !important; min-width: 220px !important; }
 }
 
 /* Very small phones */
 @media (max-width: 380px) {
-  .sidebar-nav-btn .nav-label { font-size: 0.52rem; }
+  .sidebar-nav-btn .nav-label, .nav-more-btn .nav-label { font-size: 0.56rem; }
   .achievements-grid { grid-template-columns: repeat(2, 1fr); }
+  .plants-grid { gap: 10px; }
+}
+
+/* Respect users who prefer less motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
