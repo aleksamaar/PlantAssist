@@ -2,258 +2,264 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-# PlantAssist — документация проекта
+# PlantAssist — техническая документация
+
+> **Начинать с [STATUS.md](STATUS.md)** — там текущее состояние, что не доделано,
+> известные проблемы и доступы. Здесь — только техника.
 
 ## Что это
 
-Локальное веб-приложение для ведения учёта домашних растений. Запускается через Python/Flask на `localhost:5000`. Данные хранятся в `data.json` и `cuttings.json` рядом с кодом — файлы синхронизируются через Яндекс Диск между компьютерами.
+Веб-приложение для учёта домашних растений: полив, подкормка, пересадка, обработка
+от вредителей, витамины, цветение, черенки, посевы, архив, достижения, статистика.
+
+**Развёрнуто в облаке** (PythonAnywhere) — там источник правды. Локально запускается
+для разработки; локальные данные при этом устаревшие. Подробности — в STATUS.md.
 
 ## Команды разработки
 
 ```bash
-# Установить зависимости (один раз)
-pip install flask
-
-# Запустить сервер
-python app.py
-
-# Запустить без открытия браузера (для разработки)
-python -c "from app import app; app.run(port=5000, debug=False)"
+py app.py            # локальный сервер (браузер откроется сам через 1 сек)
+start_local.bat      # то же, с предупреждением про устаревшие данные
+backup.bat           # скачать бэкап из облака в backups/
 ```
 
-Браузер откроется автоматически через 1 секунду после старта (`Timer(1.0, ...)` в `app.py`).
+После изменения `app.py` сервер нужно перезапустить вручную (`debug=False` намеренно).
+Тестов и линтера нет — всё проверяется руками в браузере.
 
-**Важно:** после любого изменения `app.py` сервер нужно перезапустить вручную (Ctrl+C → python app.py). `debug=False` намеренно — авто-перезагрузка не нужна.
+**HTTPS-режим:** если существуют `certs/server.crt` и `certs/server.key`, `app.py`
+стартует по HTTPS. Иначе — обычный HTTP. Сертификаты создаёт `gen-certs.sh`.
 
-Нет тестов, нет линтера — всё тестируется руками в браузере.
-
-## Структура файлов
+## Структура
 
 ```
 PlantAssist/
-├── app.py              # Flask-сервер + весь REST API
-├── start.bat           # Запуск двойным кликом (Windows)
-├── requirements.txt    # flask>=3.0
-├── data.json           # База данных растений (JSON, auto-created)
-├── cuttings.json       # База данных черенков (JSON, auto-created)
-├── photos/             # Фотографии растений (auto-created)
-│   └── <plantid>_<photoid>.ext
-├── static/
-│   ├── index.html      # Всё приложение (SPA, один файл)
-│   ├── style.css       # Все стили
-│   └── app.js          # Весь фронтенд (vanilla JS, без фреймворков)
-└── CLAUDE.md           # Этот файл
+├── app.py                 # Flask: REST API, авторизация, бэкапы (876 строк)
+├── wsgi.py                # точка входа для хостинга
+├── backup.py              # автобэкап из облака в Яндекс Диск (только stdlib)
+├── backup_config.bat      # АДРЕС И ПАРОЛЬ (в .gitignore!)
+├── backup.bat             # обёртка для Планировщика задач
+├── start.bat              # открывает облако
+├── start_local.bat        # локальный сервер (с предупреждением)
+├── gen-certs.sh           # локальный HTTPS-сертификат
+├── data.json              # растения (в .gitignore)
+├── cuttings.json          # черенки (в .gitignore)
+├── sowings.json           # посевы (в .gitignore)
+├── photos/                # фото: <ownerid>_<photoid>.ext (в .gitignore)
+├── backups/               # ZIP-бэкапы, синхронизируются Диском (в .gitignore)
+├── certs/                 # HTTPS-сертификаты (в .gitignore!)
+└── static/
+    ├── index.html         # SPA (429 строк)
+    ├── app.js             # весь фронтенд, vanilla JS (4073 строки)
+    ├── style.css          # все стили (2051 строка)
+    ├── manifest.json      # PWA-манифест
+    ├── sw.js              # service worker
+    └── icons/             # иконки приложения
 ```
 
 ## Стек
 
-- **Бэкенд:** Python 3, Flask (REST API + раздача статики)
-- **Фронтенд:** Vanilla JS (ES6+), HTML5, CSS3 — никаких фреймворков
-- **Хранилище:** `data.json` + `cuttings.json` (JSON-файлы на диске), фото в `photos/`
-- **Синхронизация:** через Яндекс Диск (папка проекта лежит внутри него)
+- **Бэкенд:** Python 3, Flask. Внешних зависимостей кроме flask нет.
+- **Фронтенд:** vanilla JS (ES6+), без фреймворков и без npm.
+- **CDN:** Inter (шрифт), Lucide (иконки), Chart.js 4 (графики).
+- **Хранилище:** JSON-файлы + фото на диске.
 
-## Модель данных (data.json)
+## Модель данных
 
-Массив объектов-растений:
+### data.json — растения
 
 ```json
-[
-  {
-    "id": "uuid4",
-    "name": "Фикус",
-    "description": "Заметки об уходе, сорт",
-    "purchased_date": "2024-01-15",
-    "plant_types": ["🌿 Арроидные"],
-    "problems": ["🕷 Паутинный клещ"],
-    "watering_note": "Обильно, давать просохнуть",
-    "light": "Яркий рассеянный",
-    "humidity": "Высокая",
-    "needs_repotting": false,
-    "fertilizing_reminder_date": "",
-    "archived": false,
-    "archived_date": "",
-    "archive_reason": "",
-    "photos": [
-      {
-        "id": "uuid4",
-        "filename": "<plantid>_<photoid>.jpg",
-        "date": "2024-05-20",
-        "description": "После пересадки"
-      }
-    ],
-    "watering": {
-      "frequency_days": 7,
-      "last_date": "2024-05-20",
-      "history": ["2024-05-20", "2024-05-13"]
-    },
-    "fertilizing": {
-      "frequency_days": 30,
-      "last_date": "2024-05-01",
-      "history": [{"date": "2024-05-01", "fertilizer": "Plargon Grow", "dose": "1/2"}]
-    },
-    "repotting": {
-      "last_date": "2024-03-01",
-      "history": ["2024-03-01"]
-    },
-    "pest_control": {
-      "frequency_days": 14,
-      "last_date": "2024-05-10",
-      "history": [{"date": "2024-05-10", "product": "Фитоверм"}]
-    }
-  }
-]
+{
+  "id": "uuid4",
+  "name": "Фикус",
+  "description": "", "purchased_date": "2024-01-15",
+  "plant_types": ["🌿 Арроидные"], "problems": ["🕷 Паутинный клещ"],
+  "watering_note": "", "light": "", "soil": "", "room": "Гостиная",
+  "favorited": false,
+  "is_flowering": false,
+  "flowering_log": [{"date": "2026-05-01", "event": "start", "notes": ""}],
+  "needs_repotting": false,
+  "fertilizing_reminder_date": "",
+  "mute_watering": false,
+  "mute_fertilizing": false,
+  "archived": false, "archived_date": "", "archive_reason": "",
+  "photos": [{"id": "uuid4", "filename": "...", "date": "", "description": ""}],
+  "watering":     {"frequency_days": 7,  "last_date": "", "history": ["2024-05-20"]},
+  "fertilizing":  {"frequency_days": 30, "last_date": "", "history": [{"date": "", "fertilizer": "", "dose": ""}]},
+  "repotting":    {"last_date": "", "history": []},
+  "pest_control": {"frequency_days": 14, "last_date": "", "history": [{"date": "", "product": ""}]},
+  "vitamins":     {"frequency_days": null, "last_date": "", "history": [{"date": "", "product": ""}]}
+}
 ```
+
+`flowering_log`: `event` = `start` | `end`, отсортирован от новых к старым.
+Пары start/end образуют периоды цветения. При удалении записи `is_flowering`
+пересинхронизируется по последней оставшейся.
+
+### sowings.json — посевы
+
+```json
+{
+  "id": "uuid4", "name": "Лимон Мейера",
+  "sowing_date": "2026-07-01",
+  "seeds_count": 10,
+  "sprouted_count": 5,          // ← ВЫЧИСЛЯЕТСЯ из log, не задавать напрямую
+  "first_sprout_date": "2026-07-08",  // ← ВЫЧИСЛЯЕТСЯ из log
+  "expected_min_days": 7, "expected_max_days": 21,
+  "substrate": "Грунт", "pretreatment": ["Замачивание"],
+  "notes": "", "status": "germinated",
+  "log": [{"date": "2026-07-01", "event": "sown", "count": 10},
+          {"date": "2026-07-08", "event": "sprout", "count": 2, "notes": "первые"}],
+  "photos": []
+}
+```
+
+`log` — **источник правды** для всходов. `event`: `sown` | `sprout` | `pricked_out` | `note`.
+`recompute_sowing()` пересчитывает `sprouted_count` (сумма всех `sprout`) и
+`first_sprout_date` (минимальная дата `sprout`). Поэтому `sprouted_count` и
+`first_sprout_date` **исключены из `SOWING_FIELDS`** — их нельзя менять через PUT.
+
+`status`: `sown` | `germinated` | `pricked_out` | `in_collection` | `failed`.
+Статус двигается вперёд автоматически при добавлении записи в лог, но никогда
+не откатывается назад.
+
+### cuttings.json — черенки
+
+`{id, name, parent_plant_id, date_taken, method, status, notes}`
+`method`: `water`|`soil`|`moss`. `status`: `rooting`|`rooted`|`planted`|`failed`.
 
 ### Ключевая логика дат
 
-- `next_date = last_date + frequency_days` — вычисляется на фронтенде
-- Для пересадки нет `frequency_days` — используется фиксированный год (365 дней) на странице "Сегодня"
-- `fertilizing_reminder_date` — разовое напоминание, независимое от частоты; сбрасывается в '' при записи подкормки
-- `needs_repotting` — флаг "нужно пересадить", сбрасывается в `false` при записи пересадки
-- Фото сортируются по `date` убыванием — первое = обложка карточки
-- `history` хранится отсортированным от новых к старым; записи могут быть строкой (дата) или объектом `{date, fertilizer?, dose?, product?}`
+- `next_date = last_date + frequency_days` — считается на фронтенде
+- Пересадка: фиксированный год (365 дней), нет `frequency_days`
+- `fertilizing_reminder_date` — разовое напоминание, сбрасывается при записи подкормки
+- `history` — от новых к старым; запись = строка (дата) или объект `{date, ...}`
+- Все функции дат работают в **локальном времени** (UTC+N корректен)
 
 ### Миграция
 
-`load_plants()` в `app.py` автоматически дополняет каждое растение недостающими полями при загрузке (in-memory, без записи). Это позволяет безопасно добавлять новые поля без ручной правки `data.json`. Старый формат `plant_type` (строка) мигрирует в `plant_types` (массив).
+`load_plants()` и `load_sowings()` дополняют объекты недостающими полями при
+загрузке (in-memory). Можно безопасно добавлять поля без правки JSON.
+`load_sowings()` строит `log` из старых полей, если его нет.
 
-## Модель данных (cuttings.json)
+## REST API
 
-Массив черенков:
-
-```json
-[
-  {
-    "id": "uuid4",
-    "name": "Эпипремнум",
-    "parent_plant_id": "uuid4-or-empty",
-    "date_taken": "2024-05-01",
-    "method": "water",
-    "status": "rooting",
-    "notes": "Заметки"
-  }
-]
-```
-
-`method`: `water` / `soil` / `moss`. `status`: `rooting` / `rooted` / `planted` / `failed`.
-
-## REST API (app.py)
+Всё под `/api/`, отдаёт JSON, ошибки — `{"error": "..."}`.
 
 | Метод | URL | Что делает |
 |-------|-----|-----------|
-| GET | `/api/plants` | Список активных (не архивных) растений |
-| POST | `/api/plants` | Создать растение (JSON body) |
-| PUT | `/api/plants/<id>` | Обновить поля растения |
-| DELETE | `/api/plants/<id>` | Удалить растение + все его фото |
-| POST | `/api/plants/<id>/water` | Отметить полив; тело: `{date?, ...}` |
-| POST | `/api/plants/<id>/fertilize` | Отметить подкормку; тело: `{date?, fertilizer?, dose?, next_days?}` |
-| POST | `/api/plants/<id>/repot` | Отметить пересадку; тело: `{date?}` |
-| POST | `/api/plants/<id>/pest_control` | Отметить обработку; тело: `{date?, product?, next_days?}` |
-| DELETE | `/api/plants/<id>/history` | Удалить запись из истории; тело: `{section, index}` |
-| POST | `/api/plants/<id>/photos` | Загрузить фото (multipart: photo, date, description) |
-| DELETE | `/api/plants/<id>/photos` | Удалить все фото растения |
-| DELETE | `/api/plants/<id>/photos/<photo_id>` | Удалить конкретное фото |
+| GET/POST | `/login` | Вход по паролю (если задан `PLANTASSIST_PASSWORD`) |
+| GET | `/logout` | Выход |
+| GET | `/api/plants` | Активные растения (без архивных) |
+| POST | `/api/plants` | Создать |
+| PUT/DELETE | `/api/plants/<id>` | Обновить / удалить (+фото) |
+| POST | `/api/plants/<id>/water` | Полив |
+| POST | `/api/plants/<id>/fertilize` | Подкормка `{date?, fertilizer?, dose?, next_days?}` |
+| POST | `/api/plants/<id>/repot` | Пересадка |
+| POST | `/api/plants/<id>/pest_control` | Обработка `{date?, product?, next_days?}` |
+| POST | `/api/plants/<id>/vitamins` | Витамины `{date?, product?, next_days?}` |
+| POST | `/api/plants/<id>/flowering` | Цветение `{event: start|end, date?, notes?}` |
+| DELETE | `/api/plants/<id>/history` | Удалить запись `{section, index}` |
+| POST/DELETE | `/api/plants/<id>/photos` | Загрузить (multipart) / удалить все |
+| DELETE | `/api/plants/<id>/photos/<photo_id>` | Удалить фото |
 | GET | `/photos/<filename>` | Отдать файл фото |
-| POST | `/api/plants/<id>/archive` | Архивировать растение; тело: `{reason?}` |
-| POST | `/api/plants/<id>/restore` | Восстановить из архива |
-| GET | `/api/archive` | Список архивных растений |
-| GET | `/api/cuttings` | Список черенков |
-| POST | `/api/cuttings` | Создать черенок |
-| PUT | `/api/cuttings/<id>` | Обновить черенок |
-| DELETE | `/api/cuttings/<id>` | Удалить черенок |
+| POST | `/api/plants/<id>/archive` | В архив `{reason?}` |
+| POST | `/api/plants/<id>/restore` | Из архива |
+| GET | `/api/archive` | Архивные |
+| GET/POST | `/api/cuttings` | Черенки |
+| PUT/DELETE | `/api/cuttings/<id>` | Обновить / удалить |
+| GET/POST | `/api/sowings` | Посевы (POST сам добавляет запись `sown` в лог) |
+| PUT/DELETE | `/api/sowings/<id>` | Обновить / удалить (+фото) |
+| POST | `/api/sowings/<id>/log` | Запись в журнал `{event, date?, count?, notes?}` |
+| DELETE | `/api/sowings/<id>/log` | Удалить запись `{index}` |
+| POST | `/api/sowings/<id>/photos` | Фото посева (multipart) |
+| DELETE | `/api/sowings/<id>/photos/<photo_id>` | Удалить фото |
+| GET | `/api/backup` | ZIP: данные + все фото |
+| POST | `/api/restore` | Восстановить из ZIP (multipart: `backup`) |
 
-Все API-эндпоинты возвращают JSON. Ошибки: `{"error": "..."}` с соответствующим HTTP-кодом.
+`PUT /api/plants/<id>` игнорирует `history` — она меняется только action-эндпоинтами
+через единую `_record_action()`.
 
-`PUT /api/plants/<id>` намеренно игнорирует поле `history` — история меняется только через action-эндпоинты.
+## Безопасность и надёжность
 
-Загрузка фото — единственный эндпоинт с `multipart/form-data`; все остальные используют `application/json`.
-
-Action-эндпоинты (`/water`, `/fertilize`, `/repot`, `/pest_control`) реализованы через единую `_record_action()`. Она добавляет новую запись в `history`, сортирует историю от новых к старым и обновляет `last_date`.
+- **Авторизация:** включается только при заданной `PLANTASSIST_PASSWORD`. Без неё
+  (локально) приложение открыто. `@app.before_request` пускает без входа только
+  `/login`, `/style.css`, `/manifest.json`, `/sw.js`, `/icons/*` — остальное 401
+  (для `/api/` и `/photos/`) или редирект на логин.
+- **Атомарная запись:** `_atomic_write_json()` — пишет в `.tmp` + `os.fsync` +
+  `os.replace`. Сбой посреди записи не может побить данные.
+- **Restore** проверяет ZIP, валидирует JSON до записи, и берёт `basename()` от
+  путей внутри архива — защита от path traversal.
 
 ## Фронтенд (static/app.js)
 
-Одностраничное приложение без роутера. Вся логика в одном файле.
-
-### Глобальное состояние
+SPA без роутера, вся логика в одном файле.
 
 ```js
-let plants = [];          // активные растения
-let cuttings = [];        // черенки (загружаются лениво при переключении на вкладку)
-let archivePlants = [];   // архивные растения (загружаются лениво)
+let plants = [];        // активные растения
+let cuttings = [];      // черенки (лениво)
+let sowings = [];       // посевы (грузятся при старте — нужны для напоминаний)
+let archivePlants = []; // архив (лениво)
 let currentView = 'today';
-let sortBy = 'watering';
-let filterType = '';
-let searchQuery = '';
 ```
 
-После любого изменения на сервере — локальный `plants[idx]` патчится ответом сервера, затем вызывается `render()`. Полная перезагрузка (`loadPlants()`) нужна только при старте. Вкладки "Черенки" и "Архив" загружают данные лениво при первом открытии.
+После изменения на сервере локальный объект патчится ответом сервера, затем `render()`.
 
 ### Ключевые функции
 
 | Функция | Что делает |
 |---------|-----------|
-| `loadPlants()` | GET /api/plants → обновляет `plants`, вызывает `render()` |
-| `render()` | Перерисовывает вкладки "Сегодня" и "Все растения" |
-| `renderToday()` | Список растений с просроченными задачами |
-| `renderAll()` | Сетка карточек с фильтрацией и сортировкой |
-| `renderCalendar()` | Расписание задач на ближайшие 30 дней |
-| `renderCuttings()` | Список черенков |
-| `renderArchive()` | Сетка архивных растений |
-| `buildCard(plant)` | Строит DOM-карточку растения |
-| `openDetail(plantId)` | Открывает детальную карточку в модалке |
-| `openLightbox(plant, index)` | Полноэкранный просмотр фото с навигацией |
-| `openPhotoUploadModal(plantId)` | Модалка загрузки фото |
-| `openActionDateModal(plantId, action, cb)` | Модалка выбора даты+параметров для действия |
-| `doAction(plantId, action, date, extra)` | Выполняет действие, показывает toast |
-| `applyAction(plantId, action, date, extra)` | POST на action-эндпоинт, патчит `plants` |
-| `openBulkActionModal()` | Массовая обработка нескольких растений |
-| `openAddModal()` / `openEditModal(id)` | Форма добавления/редактирования растения |
-| `openCuttingModal(cutting?)` | Модалка добавления/редактирования черенка |
-| `showToast(message, action)` | Анимированное центральное всплывающее сообщение |
-| `api(method, path, body)` | Обёртка для всех fetch-запросов (кроме загрузки фото) |
+| `api(method, path, body)` | Обёртка fetch (кроме загрузки фото) |
+| `render()` | Перерисовывает «Сегодня» и «Все растения» |
+| `renderToday()` | Просроченные задачи + напоминания о всходах |
+| `renderCalendar()` | Таблица: растения × даты, иконки задач в ячейках |
+| `renderStats()` | KPI + 4 графика Chart.js + история цветения + бэкап |
+| `renderAchievements()` | 71 достижение по категориям |
+| `renderSowings()` / `openSowingDetail()` | Посевы и журнал |
+| `buildCard(plant)` | DOM-карточка растения |
+| `openDetail(plantId)` | Детальная карточка |
+| `openActionDateModal()` / `doAction()` | Действие с выбором даты |
+| `openBulkActionModal()` | Массовая обработка (в т.ч. комната/грунт) |
+| `openMoreSheet()` | Мобильная шторка «Ещё» + переключатель темы |
+| `showToast(msg, action)` | Центральное всплывающее сообщение |
 
-### Цветовая индикация дат
+### Заглушение напоминаний
 
-- `overdue` (красный) — срок прошёл (`diff < 0`)
-- `soon` (жёлтый) — сегодня или завтра (`diff <= 1`)
-- `ok` (зелёный) — в норме
-- `none` (серый) — дата не задана
+- `isWateringMuted(p)` → `mute_watering`
+- `isFertilizingMuted(p)` → `mute_fertilizing` **или есть активные `problems`**
+  (больное растение не удобряют — авто-пауза)
 
-## Интерфейс — вкладки
+Учитывается в `getCardStatus()`, `hasOverdueTasks()`, `renderToday()`,
+`renderTodaySummary()` и `CAL_ACTIONS` календаря.
 
-**"Сегодня"** — растения с просроченными задачами (полив, подкормка, пересадка, обработка). Клик по чипу-задаче открывает модалку выбора даты, после записи чип отмечается как done.
+### Достижения
 
-**"Все растения"** — сетка карточек с поиском по имени, фильтром по типу растения, сортировкой (по поливу/подкормке/дате покупки). Карточка имеет индикатор `.has-problems` (оранжевый) или `.has-overdue` (красный).
+`ACHIEVEMENTS` — массив с `check()`. Важно: **обработка от вредителей считается по
+уникальным дням** (`_uniqueDays('pest_control')`), а не по сумме записей — она
+делается всем растениям сразу в один день. Полив/подкормка считаются по записям
+(они индивидуальны). `_totalCare()` использует то же правило.
 
-**"Календарь"** — расписание задач на ближайшие 30 дней, сгруппированных по дате и действию.
+## PWA
 
-**"Черенки"** — трекер черенков с методом укоренения, статусом и количеством дней.
+- `manifest.json` + `sw.js` + иконки. Регистрация SW — в конце `index.html`.
+- **Стратегия кэша:** `/api/` и `/photos/` — network-first (свежие данные);
+  свой HTML/CSS/JS — network-first (обновления видны сразу); иконки/CDN — cache-first.
+- Установка PWA и service worker требуют **доверенного HTTPS** — работают только
+  из облака. По локальной сети с самоподписанным сертификатом Chrome их блокирует.
 
-**"Архив"** — архивные растения с кнопками восстановления и удаления.
+## Нюансы
 
-**Детальная карточка** (модалка при клике на растение):
-- Care profile chips (условия содержания + активные проблемы)
-- Галерея: большая обложка + полоска миниатюр, кнопка добавить фото
-- Секции ухода (полив, подкормка, пересадка, обработка) с историей и кнопками действий
-- Секция "Вредители и болезни" с чипами-проблемами
-- Кнопки: "Редактировать", "В архив", "Удалить"
-
-**Лайтбокс** (клик на фото): полноэкранный просмотр, навигация стрелками/←→/Esc, кнопка удаления.
-
-## Известные решения и нюансы
-
-- **`static_url_path=''`** — Flask раздаёт статику с корневого URL, поэтому все API-маршруты начинаются с `/api/`
-- **Фото хранятся как файлы**, не в base64 в JSON — имена: `<plant_id>_<photo_id><ext>`
-- **Лайтбокс, модалки действий, загрузки фото и массовой обработки** создаются динамически и добавляются в `document.body`, в отличие от статических модалок в `index.html`
-- **Сервер слушает на `0.0.0.0`** — приложение доступно по локальной сети
-- **Темная тема** — переключается кнопкой в шапке, сохраняется в `localStorage`
-- **`GET /api/plants` не возвращает архивные растения** — они доступны только через `/api/archive`
+- **`static_url_path=''`** — статика раздаётся с корня, поэтому API под `/api/`
+- **Lucide:** `createIcons()` заменяет `<i>` на `<svg>`, поэтому при динамическом
+  обновлении иконки нужно пересоздавать элемент через `innerHTML`, а не искать `<i>`
+- **`--text-secondary`** — алиас `--text-muted` (в JS есть inline-стили с ним)
+- Фото хранятся файлами, не в base64
+- Сервер слушает `0.0.0.0` — доступен по локальной сети
+- Тёмная тема — класс `body.dark`, сохраняется в `localStorage`
+- `GET /api/plants` не возвращает архивные
 
 ## Зависимости
 
 ```
-Python >= 3.8
+Python >= 3.8 (на хостинге 3.13)
 flask >= 3.0
 ```
-
-Нет других внешних зависимостей. Фронтенд — чистый браузерный JS без npm.
