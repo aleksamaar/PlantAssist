@@ -1,7 +1,16 @@
 # Данные пользователя — не коммитить
 data.json
 cuttings.json
+sowings.json
 photos/
+
+# HTTPS-сертификаты (приватные ключи!)
+certs/
+
+# Секретный ключ сессий и локальные бэкапы
+.secret_key
+backups/
+*.tmp
 
 # Python
 __pycache__/

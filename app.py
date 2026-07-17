@@ -1,19 +1,131 @@
+import io
 import json
 import os
+import secrets
 import uuid
 import webbrowser
+import zipfile
 from datetime import date, timedelta
 from threading import Timer
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import (Flask, jsonify, redirect, render_template_string, request,
+                   send_file, send_from_directory, session, url_for)
 
 app = Flask(__name__, static_folder='static', static_url_path='')
 
-DATA_FILE = os.path.join(os.path.dirname(__file__), 'data.json')
-CUTTINGS_FILE = os.path.join(os.path.dirname(__file__), 'cuttings.json')
-PHOTOS_DIR = os.path.join(os.path.dirname(__file__), 'photos')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_FILE = os.path.join(BASE_DIR, 'data.json')
+CUTTINGS_FILE = os.path.join(BASE_DIR, 'cuttings.json')
+SOWINGS_FILE = os.path.join(BASE_DIR, 'sowings.json')
+PHOTOS_DIR = os.path.join(BASE_DIR, 'photos')
 
 os.makedirs(PHOTOS_DIR, exist_ok=True)
+
+# ── Auth ───────────────────────────────────────────────────────────────────
+# Set PLANTASSIST_PASSWORD in the hosting env to require a login.
+# Left unset (e.g. at home) the app stays open — no password.
+APP_PASSWORD = os.environ.get('PLANTASSIST_PASSWORD', '').strip()
+
+def _secret_key():
+    env = os.environ.get('PLANTASSIST_SECRET', '').strip()
+    if env:
+        return env
+    # Persist a generated key so sessions survive restarts
+    key_file = os.path.join(BASE_DIR, '.secret_key')
+    if os.path.exists(key_file):
+        with open(key_file) as f:
+            return f.read().strip()
+    key = secrets.token_hex(32)
+    with open(key_file, 'w') as f:
+        f.write(key)
+    return key
+
+app.secret_key = _secret_key()
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=365)
+
+
+def _is_public_path(path):
+    if path in ('/login', '/style.css', '/manifest.json', '/sw.js'):
+        return True
+    return path.startswith('/icons/')
+
+
+@app.before_request
+def require_login():
+    if not APP_PASSWORD:
+        return None  # auth disabled
+    if _is_public_path(request.path) or session.get('auth'):
+        return None
+    if request.path.startswith('/api/') or request.path.startswith('/photos/'):
+        return jsonify({'error': 'unauthorized'}), 401
+    return redirect(url_for('login'))
+
+
+LOGIN_PAGE = """<!DOCTYPE html><html lang="ru"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>PlantAssist — вход</title>
+<link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#3D5C42">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="/icons/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+ *{box-sizing:border-box;margin:0;padding:0}
+ body{font-family:Inter,system-ui,sans-serif;background:#F5F3EF;color:#25231F;
+      min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+ .box{background:#fff;border-radius:20px;padding:34px 28px;width:100%;max-width:360px;
+      box-shadow:0 10px 40px rgba(0,0,0,.08);text-align:center}
+ .logo{width:66px;height:66px;border-radius:18px;margin:0 auto 16px;display:block}
+ h1{font-size:1.3rem;font-weight:800;letter-spacing:-.4px;margin-bottom:6px}
+ p{font-size:.85rem;color:#8C8780;margin-bottom:22px}
+ input{width:100%;padding:13px 15px;font-size:16px;font-family:inherit;
+       border:1.5px solid #E4E0D8;border-radius:12px;outline:none;transition:border-color .15s}
+ input:focus{border-color:#6B8F71}
+ button{width:100%;margin-top:12px;padding:13px;font-size:.95rem;font-weight:700;font-family:inherit;
+        background:#3D5C42;color:#fff;border:none;border-radius:12px;cursor:pointer;transition:background .15s}
+ button:hover{background:#2F4733}
+ .err{color:#C0392B;font-size:.82rem;margin-top:12px}
+ @media(prefers-color-scheme:dark){
+   body{background:#141412;color:#E8E5DF}.box{background:#1C1C1A}
+   input{background:#252522;border-color:#343330;color:#E8E5DF}p{color:#908C84}}
+</style></head><body>
+<form class="box" method="post">
+  <img src="/icons/icon-192.png" class="logo" alt="">
+  <h1>PlantAssist</h1>
+  <p>Введите пароль для входа</p>
+  <input type="password" name="password" placeholder="Пароль" autofocus required autocomplete="current-password">
+  <button type="submit">Войти</button>
+  {% if error %}<div class="err">Неверный пароль</div>{% endif %}
+</form></body></html>"""
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if not APP_PASSWORD:
+        return redirect(url_for('index'))
+    error = False
+    if request.method == 'POST':
+        if secrets.compare_digest(request.form.get('password', ''), APP_PASSWORD):
+            session.permanent = True
+            session['auth'] = True
+            return redirect(url_for('index'))
+        error = True
+    return render_template_string(LOGIN_PAGE, error=error)
+
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+
+def _atomic_write_json(path, data):
+    """Write JSON safely — a crash mid-write can never corrupt the real file."""
+    tmp = f'{path}.tmp'
+    with open(tmp, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
 
 
 def load_cuttings():
@@ -24,8 +136,41 @@ def load_cuttings():
 
 
 def save_cuttings(cuttings):
-    with open(CUTTINGS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(cuttings, f, ensure_ascii=False, indent=2)
+    _atomic_write_json(CUTTINGS_FILE, cuttings)
+
+
+def load_sowings():
+    if not os.path.exists(SOWINGS_FILE):
+        return []
+    with open(SOWINGS_FILE, 'r', encoding='utf-8') as f:
+        sowings = json.load(f)
+    for s in sowings:
+        if 'log' not in s:
+            # Build an event log from legacy single-value fields
+            log = []
+            if s.get('sowing_date'):
+                log.append({'date': s['sowing_date'], 'event': 'sown', 'count': s.get('seeds_count')})
+            if s.get('first_sprout_date'):
+                log.append({'date': s['first_sprout_date'], 'event': 'sprout', 'count': s.get('sprouted_count')})
+            s['log'] = log
+        s.setdefault('photos', [])
+    return sowings
+
+
+def recompute_sowing(s):
+    """Derive sprouted_count / first_sprout_date from the event log."""
+    log = s.get('log', [])
+    sprouts = [e for e in log if e.get('event') == 'sprout']
+    if sprouts:
+        s['sprouted_count'] = sum(int(e.get('count') or 0) for e in sprouts)
+        s['first_sprout_date'] = min(e['date'] for e in sprouts if e.get('date'))
+    else:
+        s['sprouted_count'] = None
+        s['first_sprout_date'] = ''
+
+
+def save_sowings(sowings):
+    _atomic_write_json(SOWINGS_FILE, sowings)
 
 
 def load_plants():
@@ -45,6 +190,10 @@ def load_plants():
             plant['is_flowering'] = False
         if 'flowering_log' not in plant:
             plant['flowering_log'] = []
+        if 'mute_watering' not in plant:
+            plant['mute_watering'] = False
+        if 'mute_fertilizing' not in plant:
+            plant['mute_fertilizing'] = False
         if 'needs_repotting' not in plant:
             plant['needs_repotting'] = False
         if 'fertilizing_reminder_date' not in plant:
@@ -77,8 +226,7 @@ def load_plants():
 
 
 def save_plants(plants):
-    with open(DATA_FILE, 'w', encoding='utf-8') as f:
-        json.dump(plants, f, ensure_ascii=False, indent=2)
+    _atomic_write_json(DATA_FILE, plants)
 
 
 def find_plant(plants, plant_id):
@@ -175,7 +323,7 @@ def update_plant(plant_id):
     if not plant:
         return jsonify({'error': 'Not found'}), 404
     data = request.json
-    for field in ('name', 'description', 'purchased_date', 'watering_note', 'light', 'soil', 'room', 'favorited', 'is_flowering', 'needs_repotting', 'fertilizing_reminder_date'):
+    for field in ('name', 'description', 'purchased_date', 'watering_note', 'light', 'soil', 'room', 'favorited', 'is_flowering', 'needs_repotting', 'fertilizing_reminder_date', 'mute_watering', 'mute_fertilizing'):
         if field in data:
             plant[field] = data[field]
     if 'plant_types' in data:
@@ -488,6 +636,241 @@ def delete_cutting(cutting_id):
     return '', 204
 
 
+# ── Sowings (посевной дневник) ──────────────────────────────────────────────
+# sprouted_count / first_sprout_date are derived from the log — not directly settable
+SOWING_FIELDS = (
+    'name', 'sowing_date', 'seeds_count',
+    'expected_min_days', 'expected_max_days',
+    'substrate', 'pretreatment', 'notes', 'status',
+)
+
+
+@app.route('/api/sowings', methods=['GET'])
+def get_sowings():
+    return jsonify(load_sowings())
+
+
+@app.route('/api/sowings', methods=['POST'])
+def create_sowing():
+    sowings = load_sowings()
+    data = request.json or {}
+    sowing_date = data.get('sowing_date', date.today().isoformat())
+    seeds = data.get('seeds_count', None)
+    sowing = {
+        'id': str(uuid.uuid4()),
+        'name': data.get('name', ''),
+        'sowing_date': sowing_date,
+        'seeds_count': seeds,
+        'sprouted_count': None,
+        'expected_min_days': data.get('expected_min_days', None),
+        'expected_max_days': data.get('expected_max_days', None),
+        'first_sprout_date': '',
+        'substrate': data.get('substrate', ''),
+        'pretreatment': data.get('pretreatment', []),
+        'notes': data.get('notes', ''),
+        'status': data.get('status', 'sown'),
+        'log': [{'date': sowing_date, 'event': 'sown', 'count': seeds}],
+        'photos': [],
+    }
+    recompute_sowing(sowing)
+    sowings.append(sowing)
+    save_sowings(sowings)
+    return jsonify(sowing), 201
+
+
+@app.route('/api/sowings/<sowing_id>/log', methods=['POST'])
+def add_sowing_log(sowing_id):
+    sowings = load_sowings()
+    sowing = next((s for s in sowings if s['id'] == sowing_id), None)
+    if not sowing:
+        return jsonify({'error': 'Not found'}), 404
+    data = request.json or {}
+    event = data.get('event', 'note')
+    entry = {'date': data.get('date') or date.today().isoformat(), 'event': event}
+    if data.get('count') not in (None, ''):
+        entry['count'] = int(data['count'])
+    if data.get('notes'):
+        entry['notes'] = data['notes'].strip()
+    sowing.setdefault('log', []).append(entry)
+    sowing['log'].sort(key=lambda e: e.get('date', ''))
+    recompute_sowing(sowing)
+    # Nudge status forward (never downgrade a manual terminal state)
+    if event == 'sprout' and sowing.get('status') == 'sown':
+        sowing['status'] = 'germinated'
+    elif event == 'pricked_out' and sowing.get('status') in ('sown', 'germinated'):
+        sowing['status'] = 'pricked_out'
+    save_sowings(sowings)
+    return jsonify(sowing), 201
+
+
+@app.route('/api/sowings/<sowing_id>/log', methods=['DELETE'])
+def delete_sowing_log(sowing_id):
+    sowings = load_sowings()
+    sowing = next((s for s in sowings if s['id'] == sowing_id), None)
+    if not sowing:
+        return jsonify({'error': 'Not found'}), 404
+    data = request.get_json(silent=True) or {}
+    idx = data.get('index')
+    log = sowing.get('log', [])
+    if idx is None or idx < 0 or idx >= len(log):
+        return jsonify({'error': 'Bad index'}), 400
+    log.pop(idx)
+    recompute_sowing(sowing)
+    save_sowings(sowings)
+    return jsonify(sowing)
+
+
+@app.route('/api/sowings/<sowing_id>', methods=['PUT'])
+def update_sowing(sowing_id):
+    sowings = load_sowings()
+    sowing = next((s for s in sowings if s['id'] == sowing_id), None)
+    if not sowing:
+        return jsonify({'error': 'Not found'}), 404
+    data = request.json or {}
+    old_sowing_date = sowing.get('sowing_date')
+    for field in SOWING_FIELDS:
+        if field in data:
+            sowing[field] = data[field]
+    # Keep the initial "sown" log entry in sync with an edited sowing date
+    new_date = sowing.get('sowing_date')
+    if new_date and new_date != old_sowing_date:
+        for e in sowing.get('log', []):
+            if e.get('event') == 'sown':
+                e['date'] = new_date
+                if 'seeds_count' in data:
+                    e['count'] = sowing.get('seeds_count')
+                break
+        sowing['log'].sort(key=lambda e: e.get('date', ''))
+    recompute_sowing(sowing)
+    save_sowings(sowings)
+    return jsonify(sowing)
+
+
+@app.route('/api/sowings/<sowing_id>', methods=['DELETE'])
+def delete_sowing(sowing_id):
+    sowings = load_sowings()
+    target = next((s for s in sowings if s['id'] == sowing_id), None)
+    if target:
+        for photo in target.get('photos', []):
+            path = os.path.join(PHOTOS_DIR, photo['filename'])
+            if os.path.exists(path):
+                os.remove(path)
+    sowings = [s for s in sowings if s['id'] != sowing_id]
+    save_sowings(sowings)
+    return '', 204
+
+
+@app.route('/api/sowings/<sowing_id>/photos', methods=['POST'])
+def upload_sowing_photo(sowing_id):
+    sowings = load_sowings()
+    sowing = next((s for s in sowings if s['id'] == sowing_id), None)
+    if not sowing:
+        return jsonify({'error': 'Not found'}), 404
+    if 'photo' not in request.files:
+        return jsonify({'error': 'No file'}), 400
+    file = request.files['photo']
+    photo_date = request.form.get('date', date.today().isoformat())
+    description = request.form.get('description', '')
+    photo_id = str(uuid.uuid4())
+    ext = os.path.splitext(file.filename)[1].lower() or '.jpg'
+    filename = f"{sowing_id}_{photo_id}{ext}"
+    file.save(os.path.join(PHOTOS_DIR, filename))
+    entry = {'id': photo_id, 'filename': filename, 'date': photo_date, 'description': description}
+    sowing.setdefault('photos', []).append(entry)
+    save_sowings(sowings)
+    return jsonify(entry), 201
+
+
+@app.route('/api/sowings/<sowing_id>/photos/<photo_id>', methods=['DELETE'])
+def delete_sowing_photo(sowing_id, photo_id):
+    sowings = load_sowings()
+    sowing = next((s for s in sowings if s['id'] == sowing_id), None)
+    if not sowing:
+        return jsonify({'error': 'Not found'}), 404
+    photos = sowing.get('photos', [])
+    photo = next((p for p in photos if p['id'] == photo_id), None)
+    if not photo:
+        return jsonify({'error': 'Photo not found'}), 404
+    path = os.path.join(PHOTOS_DIR, photo['filename'])
+    if os.path.exists(path):
+        os.remove(path)
+    sowing['photos'] = [p for p in photos if p['id'] != photo_id]
+    save_sowings(sowings)
+    return '', 204
+
+
+# ── Backup / restore ────────────────────────────────────────────────────────
+DATA_FILES = (DATA_FILE, CUTTINGS_FILE, SOWINGS_FILE)
+
+
+@app.route('/api/backup', methods=['GET'])
+def download_backup():
+    """Everything (data + photos) as one ZIP."""
+    mem = io.BytesIO()
+    with zipfile.ZipFile(mem, 'w', zipfile.ZIP_DEFLATED) as z:
+        for path in DATA_FILES:
+            if os.path.exists(path):
+                z.write(path, os.path.basename(path))
+        if os.path.isdir(PHOTOS_DIR):
+            for name in sorted(os.listdir(PHOTOS_DIR)):
+                full = os.path.join(PHOTOS_DIR, name)
+                if os.path.isfile(full):
+                    z.write(full, f'photos/{name}')
+    mem.seek(0)
+    return send_file(
+        mem, mimetype='application/zip', as_attachment=True,
+        download_name=f'plantassist-backup-{date.today().isoformat()}.zip',
+    )
+
+
+@app.route('/api/restore', methods=['POST'])
+def restore_backup():
+    """Restore from a backup ZIP produced by /api/backup."""
+    if 'backup' not in request.files:
+        return jsonify({'error': 'No file'}), 400
+    file = request.files['backup']
+    allowed = {os.path.basename(p) for p in DATA_FILES}
+    restored = {'data': 0, 'photos': 0}
+    try:
+        with zipfile.ZipFile(file) as z:
+            names = z.namelist()
+            if not any(n in allowed for n in names):
+                return jsonify({'error': 'Не похоже на бэкап PlantAssist'}), 400
+            for name in names:
+                if name.endswith('/'):
+                    continue
+                base = os.path.basename(name)
+                if not base:
+                    continue
+                if name in allowed:
+                    target = os.path.join(BASE_DIR, base)
+                    with z.open(name) as src:
+                        payload = src.read()
+                    json.loads(payload.decode('utf-8'))  # validate before writing
+                    tmp = f'{target}.tmp'
+                    with open(tmp, 'wb') as out:
+                        out.write(payload)
+                    os.replace(tmp, target)
+                    restored['data'] += 1
+                elif name.startswith('photos/'):
+                    target = os.path.join(PHOTOS_DIR, base)  # basename blocks path traversal
+                    with z.open(name) as src, open(target, 'wb') as out:
+                        out.write(src.read())
+                    restored['photos'] += 1
+    except zipfile.BadZipFile:
+        return jsonify({'error': 'Повреждённый ZIP'}), 400
+    except (ValueError, UnicodeDecodeError):
+        return jsonify({'error': 'Повреждённые данные в бэкапе'}), 400
+    return jsonify({'ok': True, **restored})
+
+
 if __name__ == '__main__':
-    Timer(1.0, lambda: webbrowser.open('http://localhost:5000')).start()
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    cert = os.path.join(os.path.dirname(__file__), 'certs', 'server.crt')
+    key = os.path.join(os.path.dirname(__file__), 'certs', 'server.key')
+    if os.path.exists(cert) and os.path.exists(key):
+        # HTTPS mode — needed for full PWA (service worker + install) on phones
+        Timer(1.0, lambda: webbrowser.open('https://localhost:5000')).start()
+        app.run(host='0.0.0.0', port=5000, debug=False, ssl_context=(cert, key))
+    else:
+        Timer(1.0, lambda: webbrowser.open('http://localhost:5000')).start()
+        app.run(host='0.0.0.0', port=5000, debug=False)

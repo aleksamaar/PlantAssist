@@ -2,8 +2,19 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>PlantAssist</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#3D5C42">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="PlantAssist">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="/icons/icon-192.png">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -34,6 +45,10 @@
         <button class="sidebar-nav-btn" data-view="cuttings">
           <i data-lucide="scissors" class="nav-icon"></i>
           <span class="nav-label">Черенки</span>
+        </button>
+        <button class="sidebar-nav-btn" data-view="sowings">
+          <i data-lucide="sprout" class="nav-icon"></i>
+          <span class="nav-label">Посевы</span>
         </button>
         <button class="sidebar-nav-btn" data-view="archive">
           <i data-lucide="archive" class="nav-icon"></i>
@@ -132,6 +147,26 @@
         <div id="cuttings-list" class="cuttings-list"></div>
       </div>
 
+      <!-- Посевы -->
+      <div id="view-sowings" class="view">
+        <div class="view-header">
+          <div>
+            <h2 class="view-title">Посевной дневник</h2>
+            <p class="view-subtitle" id="sowings-subtitle">Что сею из семян</p>
+          </div>
+          <button class="btn-primary" id="btn-add-sowing">
+            <i data-lucide="plus" style="width:15px;height:15px;"></i>
+            Новый посев
+          </button>
+        </div>
+        <div id="sowings-empty" class="empty-state" style="display:none">
+          <div class="empty-icon">🌱</div>
+          <p class="empty-title">Пока нет посевов</p>
+          <p class="empty-sub">Добавьте первый посев, чтобы вести дневник всходов</p>
+        </div>
+        <div id="sowings-grid" class="plants-grid"></div>
+      </div>
+
       <!-- Архив -->
       <div id="view-archive" class="view">
         <div class="view-header">
@@ -153,9 +188,10 @@
         <div class="view-header">
           <div>
             <h2 class="view-title">План ухода</h2>
-            <p class="view-subtitle">Расписание на ближайшие 30 дней</p>
+            <p class="view-subtitle" id="cal-subtitle"></p>
           </div>
         </div>
+        <div id="cal-kpi-row" class="cal-kpi-row"></div>
         <div id="calendar-container" class="calendar-container"></div>
       </div>
 
@@ -269,6 +305,10 @@
               <input type="number" id="form-water-freq" min="1" max="365" placeholder="не задано">
             </div>
           </div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.9rem;margin-top:4px;">
+            <input type="checkbox" id="form-mute-watering" style="width:16px;height:16px;accent-color:var(--sage);">
+            🔕 Не напоминать о поливе
+          </label>
         </div>
 
         <div class="form-section">
@@ -283,6 +323,11 @@
               <input type="number" id="form-fert-freq" min="1" max="365" value="30">
             </div>
           </div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.9rem;margin-top:4px;">
+            <input type="checkbox" id="form-mute-fertilizing" style="width:16px;height:16px;accent-color:var(--sage);">
+            🔕 Не напоминать о подкормке
+          </label>
+          <p style="font-size:0.78rem;color:var(--text-muted);margin-top:6px;">Подкормка автоматически ставится на паузу, пока у растения есть активная проблема/вредитель.</p>
         </div>
 
         <div class="form-section">
@@ -365,6 +410,15 @@
         el.textContent = d.toLocaleDateString('ru-RU', opts);
       }
     });
+
+    // Register PWA service worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(err =>
+          console.warn('SW registration failed:', err)
+        );
+      });
+    }
   </script>
 </body>
 </html>
