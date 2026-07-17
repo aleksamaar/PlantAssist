@@ -12,6 +12,9 @@ certs/
 backups/
 *.tmp
 
+# Личные настройки бэкапа (АДРЕС И ПАРОЛЬ!) — никогда не коммитить
+backup_config.bat
+
 # Python
 __pycache__/
 *.pyc
