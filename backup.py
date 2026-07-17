@@ -27,8 +27,10 @@ URL = os.environ.get('PLANTASSIST_URL', 'https://localhost:5000')
 # Пароль от приложения (если он задан на сервере). Пусто — если пароля нет.
 PASSWORD = os.environ.get('PLANTASSIST_PASSWORD', '')
 
-# Куда складывать бэкапы (папка внутри Яндекс Диска — синхронизируется сама)
-DEST_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backups')
+# Куда складывать бэкапы — папка внутри Яндекс Диска (синхронизируется сама).
+# Задаётся в backup_config.bat; по умолчанию — backups/ рядом со скриптом.
+DEST_DIR = os.environ.get('PLANTASSIST_BACKUP_DIR', '').strip() \
+    or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backups')
 
 # Сколько последних копий хранить
 KEEP = 30
