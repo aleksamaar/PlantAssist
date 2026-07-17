@@ -20,7 +20,14 @@ if not exist "backup_config.bat" (
 call backup_config.bat
 
 echo Качаю бэкап из %PLANTASSIST_URL% ...
-"C:\Users\aleksamaar\AppData\Local\Python\bin\python.exe" backup.py
+
+REM Ищем Python: сначала стандартный лаунчер, потом привычный путь
+where py >nul 2>&1
+if %errorlevel%==0 (
+  py backup.py
+) else (
+  "C:\Users\aleksamaar\AppData\Local\Python\bin\python.exe" backup.py
+)
 if errorlevel 1 (
   echo.
   echo [!] Бэкап НЕ выполнен. Проверь адрес и пароль в backup_config.bat
