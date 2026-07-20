@@ -1,20 +1,19 @@
 @echo off
-chcp 65001 > nul
 cd /d "%~dp0"
 
 echo ============================================================
-echo  ВНИМАНИЕ: это ЛОКАЛЬНЫЙ сервер для разработки.
+echo  WARNING: this is the LOCAL development server.
 echo.
-echo  Твои настоящие данные живут в облаке. Здесь — старая копия.
-echo  Изменения, сделанные тут, В ОБЛАКО НЕ ПОПАДУТ и потеряются.
+echo  Your real data lives in the cloud. This here is an old copy.
+echo  Changes made here WILL NOT reach the cloud and will be lost.
 echo.
-echo  Чтобы работать с растениями — запусти start.bat (откроет облако).
+echo  To manage your plants, run start.bat (opens the cloud).
 echo ============================================================
 echo.
-set /p answer="Всё равно запустить локально? (y/n): "
+set /p answer="Run locally anyway? (y/n): "
 if /i not "%answer%"=="y" exit /b 0
 
 echo.
-echo Запуск локального сервера...
+echo Starting local server...
 py app.py
 pause

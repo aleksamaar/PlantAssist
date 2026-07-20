@@ -7,6 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > **Начинать с [STATUS.md](STATUS.md)** — там текущее состояние, что не доделано,
 > известные проблемы и доступы. Здесь — только техника.
 
+Остальные документы: [DEPLOY.md](DEPLOY.md) — развёртывание на PythonAnywhere и
+настройка автобэкапа в Планировщике задач; [MOBILE.md](MOBILE.md) — установка PWA
+на Android и локальный сертификат.
+
 ## Что это
 
 Веб-приложение для учёта домашних растений: полив, подкормка, пересадка, обработка
@@ -29,6 +33,18 @@ backup.bat           # скачать бэкап из облака в backups/
 **HTTPS-режим:** если существуют `certs/server.crt` и `certs/server.key`, `app.py`
 стартует по HTTPS. Иначе — обычный HTTP. Сертификаты создаёт `gen-certs.sh`.
 
+### Переменные окружения
+
+| Переменная | Кто читает | Что делает |
+|------------|-----------|-----------|
+| `PLANTASSIST_PASSWORD` | `app.py`, `backup.py` | Пароль. В `app.py` — включает авторизацию (не задан → приложение открыто). В `backup.py` — пароль для входа при скачивании бэкапа. |
+| `PLANTASSIST_SECRET` | `app.py` | Ключ сессий. Не задан → генерируется и кладётся в `.secret_key`, чтобы сессии переживали рестарт. |
+| `PLANTASSIST_URL` | `backup.py` | Откуда качать бэкап. По умолчанию `https://localhost:5000`. |
+| `PLANTASSIST_BACKUP_DIR` | `backup.py` | Куда класть ZIP. По умолчанию — `backups/` рядом с проектом. |
+
+Локально всё это задаётся через `backup_config.bat` (в `.gitignore` — там адрес
+и пароль), на хостинге — через панель PythonAnywhere.
+
 ## Структура
 
 ```
@@ -41,8 +57,10 @@ PlantAssist/
 ├── start.bat              # открывает облако
 ├── start_local.bat        # локальный сервер (с предупреждением)
 ├── gen-certs.sh           # локальный HTTPS-сертификат
+├── requirements.txt       # flask>=3.0 — и всё
+├── .secret_key            # ключ сессий, создаётся сам (в .gitignore)
 ├── data.json              # растения (в .gitignore)
-├── cuttings.json          # черенки (в .gitignore)
+├── cuttings.json          # черенки (в .gitignore; создаётся при первом черенке)
 ├── sowings.json           # посевы (в .gitignore)
 ├── photos/                # фото: <ownerid>_<photoid>.ext (в .gitignore)
 ├── backups/               # ZIP-бэкапы, синхронизируются Диском (в .gitignore)

@@ -1,17 +1,16 @@
 @echo off
-chcp 65001 > nul
-REM Автобэкап PlantAssist из облака в Яндекс Диск.
-REM Настройки (адрес и пароль) лежат в backup_config.bat — он не попадает в git.
+REM Auto-backup PlantAssist from the cloud to Yandex Disk.
+REM Settings (address and password) live in backup_config.bat - not in git.
 
 cd /d "%~dp0"
 
 if not exist "backup_config.bat" (
   echo.
-  echo [!] Нет файла backup_config.bat — не знаю, откуда качать бэкап.
-  echo     Создай его рядом с этим файлом, внутри:
+  echo [!] backup_config.bat is missing - don't know where to download from.
+  echo     Create it next to this file, containing:
   echo.
   echo     set PLANTASSIST_URL=https://aleksamaar.pythonanywhere.com
-  echo     set PLANTASSIST_PASSWORD=твой-пароль
+  echo     set PLANTASSIST_PASSWORD=your-password
   echo.
   pause
   exit /b 1
@@ -19,9 +18,9 @@ if not exist "backup_config.bat" (
 
 call backup_config.bat
 
-echo Качаю бэкап из %PLANTASSIST_URL% ...
+echo Downloading backup from %PLANTASSIST_URL% ...
 
-REM Ищем Python: сначала стандартный лаунчер, потом привычный путь
+REM Find Python: try the standard launcher first, then the usual path
 where py >nul 2>&1
 if %errorlevel%==0 (
   py backup.py
@@ -30,11 +29,11 @@ if %errorlevel%==0 (
 )
 if errorlevel 1 (
   echo.
-  echo [!] Бэкап НЕ выполнен. Проверь адрес и пароль в backup_config.bat
+  echo [!] Backup FAILED. Check the address and password in backup_config.bat
   pause
   exit /b 1
 )
 
 echo.
-echo Готово. Копия лежит в backups\ и синхронизируется Яндекс Диском.
+echo Done. The copy is in backups\ and syncs via Yandex Disk.
 timeout /t 3 > nul
