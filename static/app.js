@@ -2532,9 +2532,9 @@ function openArchiveModal(plant, onConfirm) {
         <label>Причина <span style="color:var(--text-secondary);font-size:0.85em">(необязательно)</span></label>
         <div id="archive-reason-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;"></div>
       </div>
-      <div class="form-group" id="archive-other-wrap" style="display:none;">
-        <label>Другая причина</label>
-        <input type="text" id="archive-other-input" placeholder="Опишите причину...">
+      <div class="form-group">
+        <label>Комментарий <span style="color:var(--text-secondary);font-size:0.85em">(необязательно)</span></label>
+        <textarea id="archive-comment" rows="2" placeholder="Что случилось, детали..."></textarea>
       </div>
       <div class="form-actions">
         <button type="button" class="btn-secondary" id="archive-cancel">Отмена</button>
@@ -2552,8 +2552,6 @@ function openArchiveModal(plant, onConfirm) {
 
   let selectedReason = '';
   const chipsWrap = document.getElementById('archive-reason-chips');
-  const otherWrap = document.getElementById('archive-other-wrap');
-  const otherInput = document.getElementById('archive-other-input');
 
   const makeChip = (label) => {
     const chip = document.createElement('button');
@@ -2562,30 +2560,23 @@ function openArchiveModal(plant, onConfirm) {
     chip.textContent = label;
     chip.addEventListener('click', () => {
       chipsWrap.querySelectorAll('.type-chip').forEach(c => c.classList.remove('selected'));
-      const isOther = label === '✏️ Другое';
       if (selectedReason === label) {
-        selectedReason = '';
-        otherWrap.style.display = 'none';
+        selectedReason = '';           // повторный клик — снять выбор
       } else {
         chip.classList.add('selected');
         selectedReason = label;
-        otherWrap.style.display = isOther ? '' : 'none';
-        if (!isOther) otherInput.value = '';
       }
     });
     return chip;
   };
 
   ARCHIVE_REASONS.forEach(r => chipsWrap.appendChild(makeChip(r)));
-  chipsWrap.appendChild(makeChip('✏️ Другое'));
 
   document.getElementById('archive-confirm').addEventListener('click', async () => {
-    let reason = '';
-    if (selectedReason === '✏️ Другое') {
-      reason = otherInput.value.trim();
-    } else {
-      reason = selectedReason;
-    }
+    const comment = document.getElementById('archive-comment').value.trim();
+    // Причина-чип и комментарий объединяются: "😔 Погибла — детали"
+    let reason = selectedReason;
+    if (comment) reason = selectedReason ? `${selectedReason} — ${comment}` : comment;
     modal.remove();
     await onConfirm(reason);
   });
