@@ -2934,6 +2934,13 @@ function buildSowingCard(s) {
   meta.textContent = `Посев: ${s.sowing_date ? formatDate(s.sowing_date) : '—'}${s.substrate ? ' · ' + s.substrate : ''}`;
   body.appendChild(meta);
 
+  if ((s.contents || []).length) {
+    const inside = document.createElement('div');
+    inside.className = 'plant-room-text sowing-contents-line';
+    inside.textContent = `📦 внутри: ${s.contents.join(', ')}`;
+    body.appendChild(inside);
+  }
+
   const prog = sowingProgressText(s);
   const statusRow = document.createElement('div');
   statusRow.className = 'plant-status-row';
@@ -2996,8 +3003,14 @@ function openSowingModal(sowing = null) {
       <button class="modal-close">&times;</button>
     </div>
     <div style="padding:20px;display:flex;flex-direction:column;gap:12px;">
-      <div class="form-group"><label>Вид / название *</label>
-        <input type="text" id="sow-name" value="${sowing?.name || ''}" placeholder="Лимон Мейера, Стрелиция..." required></div>
+      <div class="form-group"><label>Название *</label>
+        <input type="text" id="sow-name" value="${sowing?.name || ''}" placeholder="Лимон Мейера или «Коробка №1»..." required></div>
+      <div class="form-group"><label>Что внутри (если в одной коробке разное)</label>
+        <div class="sow-content-add">
+          <input type="text" id="sow-content-input" placeholder="напр. Халапеньо">
+          <button type="button" class="btn-secondary" id="sow-content-btn">+ Добавить</button>
+        </div>
+        <div class="form-type-chips" id="sow-content-chips"></div></div>
       <div class="form-row">
         <div class="form-group"><label>Дата посева</label>
           <input type="date" id="sow-date" value="${sowing?.sowing_date || today()}"></div>
@@ -3032,11 +3045,43 @@ function openSowingModal(sowing = null) {
   content.querySelectorAll('.sow-pre-chip').forEach(chip => {
     chip.addEventListener('click', () => chip.classList.toggle('selected'));
   });
+
+  // "What's inside" — free-form removable chips (box mode)
+  const contentItems = [...(sowing?.contents || [])];
+  const contentChips = content.querySelector('#sow-content-chips');
+  const renderContentChips = () => {
+    contentChips.innerHTML = '';
+    contentItems.forEach((v, i) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'type-chip selected sow-content-chip';
+      chip.textContent = v + ' ✕';
+      chip.title = 'Убрать';
+      chip.addEventListener('click', () => { contentItems.splice(i, 1); renderContentChips(); });
+      contentChips.appendChild(chip);
+    });
+  };
+  renderContentChips();
+  const addContentItem = () => {
+    const inp = document.getElementById('sow-content-input');
+    const v = inp.value.trim();
+    if (v && !contentItems.includes(v)) { contentItems.push(v); renderContentChips(); }
+    inp.value = '';
+    inp.focus();
+  };
+  document.getElementById('sow-content-btn').addEventListener('click', addContentItem);
+  document.getElementById('sow-content-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); addContentItem(); }
+  });
+
   content.querySelector('.modal-close').addEventListener('click', () => modal.remove());
   document.getElementById('sow-cancel').addEventListener('click', () => modal.remove());
   document.getElementById('sow-save').addEventListener('click', async () => {
     const name = document.getElementById('sow-name').value.trim();
     if (!name) return;
+    // Pick up a typed-but-not-added content item
+    const pending = document.getElementById('sow-content-input').value.trim();
+    if (pending && !contentItems.includes(pending)) contentItems.push(pending);
     const numOrNull = id => { const v = document.getElementById(id).value; return v === '' ? null : parseInt(v); };
     const payload = {
       name,
@@ -3048,6 +3093,7 @@ function openSowingModal(sowing = null) {
       pretreatment: [...content.querySelectorAll('.sow-pre-chip.selected')].map(c => c.dataset.val),
       status: document.getElementById('sow-status').value,
       notes: document.getElementById('sow-notes').value.trim(),
+      contents: contentItems,
     };
     if (sowing) {
       const updated = await api('PUT', `/api/sowings/${sowing.id}`, payload);
@@ -3256,6 +3302,7 @@ function openSowingDetail(id) {
       <div class="sowing-log" id="sow-log-list"></div>
 
       <div class="sowing-fields">
+        ${(s.contents || []).length ? `<div><span>📦 Внутри</span><b>${s.contents.join(', ')}</b></div>` : ''}
         ${s.substrate ? `<div><span>Субстрат</span><b>${s.substrate}</b></div>` : ''}
         ${(s.pretreatment || []).length ? `<div><span>Предобработка</span><b>${s.pretreatment.join(', ')}</b></div>` : ''}
         ${s.notes ? `<div class="sow-notes"><span>Заметки</span><p>${s.notes}</p></div>` : ''}

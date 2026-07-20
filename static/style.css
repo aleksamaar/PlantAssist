@@ -1807,6 +1807,13 @@ body.dark .backup-card { background: #1C1C1A; }
 .sowing-fields span { color: var(--text-muted); display: block; font-size: 0.75rem; margin-bottom: 2px; }
 .sowing-fields .sow-notes p { margin: 0; color: var(--text); }
 
+/* "What's inside" — box contents input + chips */
+.sow-content-add { display: flex; gap: 6px; margin-top: 4px; }
+.sow-content-add input { flex: 1; min-width: 0; }
+.sow-content-add .btn-secondary { flex: 0 0 auto; white-space: nowrap; padding: 8px 12px; }
+.sow-content-chip { cursor: pointer; }
+.sowing-contents-line { color: var(--text-secondary); }
+
 /* Fullscreen single-image viewer */
 .sowing-img-overlay {
   position: fixed; inset: 0; z-index: 400;

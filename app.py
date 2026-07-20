@@ -154,6 +154,7 @@ def load_sowings():
                 log.append({'date': s['first_sprout_date'], 'event': 'sprout', 'count': s.get('sprouted_count')})
             s['log'] = log
         s.setdefault('photos', [])
+        s.setdefault('contents', [])  # "box" mode: several plants in one sowing
     return sowings
 
 
@@ -642,6 +643,7 @@ SOWING_FIELDS = (
     'name', 'sowing_date', 'seeds_count',
     'expected_min_days', 'expected_max_days',
     'substrate', 'pretreatment', 'notes', 'status',
+    'contents',
 )
 
 
@@ -669,6 +671,7 @@ def create_sowing():
         'pretreatment': data.get('pretreatment', []),
         'notes': data.get('notes', ''),
         'status': data.get('status', 'sown'),
+        'contents': data.get('contents', []),
         'log': [{'date': sowing_date, 'event': 'sown', 'count': seeds}],
         'photos': [],
     }
