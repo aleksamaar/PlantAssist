@@ -7,7 +7,7 @@
 
   <!-- PWA -->
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#3D5C42">
+  <meta name="theme-color" content="#38492F">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -17,7 +17,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="style.css">
@@ -79,15 +79,22 @@
     <main>
       <!-- Вид "Сегодня" -->
       <div id="view-today" class="view active">
-        <div class="view-header">
-          <div>
-            <h2 class="view-title">Доброе утро 🌿</h2>
-            <p class="view-subtitle" id="today-date-label"></p>
+        <!-- Шапка с фото, растворяющимся к левому нижнему углу.
+             Пока заглушка: подставить сюда <img> и убрать .hero-plant-placeholder -->
+        <div class="hero-header">
+          <div class="hero-plant">
+            <div class="hero-plant-placeholder"><span>место под фото</span></div>
           </div>
-          <button class="btn-secondary" id="btn-bulk-action">
-            <i data-lucide="list-checks" style="width:15px;height:15px;"></i>
-            Всем сразу
-          </button>
+          <div class="view-header">
+            <div>
+              <p class="greeting-sub" id="today-date-label"></p>
+              <h2 class="view-title">Доброе утро 🌿</h2>
+            </div>
+            <button class="btn-secondary" id="btn-bulk-action">
+              <i data-lucide="list-checks" style="width:15px;height:15px;"></i>
+              Всем сразу
+            </button>
+          </div>
         </div>
         <div id="today-empty" class="empty-state" style="display:none">
           <div class="empty-icon">🌱</div>
@@ -251,18 +258,18 @@
               <input type="date" id="form-purchased">
             </div>
             <div class="form-group">
+              <label>Стоимость, ₽</label>
+              <input type="number" id="form-price" min="0" step="1" inputmode="decimal" placeholder="например, 1200">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
               <label>Комната</label>
               <div id="form-room-wrap"></div>
             </div>
           </div>
           <div class="form-row form-checks-row">
             <label class="form-check-label">
-            <div class="form-group">
-              <label>Стоимость, ₽</label>
-              <input type="number" id="form-price" min="0" step="1" inputmode="decimal" placeholder="например, 1200">
-            </div>
-          </div>
-          <div class="form-row">
               <input type="checkbox" id="form-favorited" class="form-check-input">
               ❤️ Избранное
             </label>

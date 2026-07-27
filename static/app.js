@@ -402,6 +402,8 @@ async function api(method, path, body) {
   if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
   const res = await fetch(path, opts);
   if (!res.ok) throw new Error(await res.text());
+  // Anything that changed data may have unlocked an achievement
+  if (method !== 'GET' && !path.startsWith('/api/achievements')) scheduleAchievementCheck();
   if (res.status === 204) return null;
   return res.json();
 }
@@ -413,8 +415,6 @@ async function loadPlants() {
 
 async function loadCuttings() {
   cuttings = await api('GET', '/api/cuttings');
-  // Anything that changed data may have unlocked an achievement
-  if (method !== 'GET' && !path.startsWith('/api/achievements')) scheduleAchievementCheck();
   renderCuttings();
 }
 
@@ -1902,6 +1902,7 @@ function openAddModal() {
     document.getElementById('form-name').value = draft.name || '';
     document.getElementById('form-description').value = draft.description || '';
     document.getElementById('form-purchased').value = draft.purchased || '';
+    document.getElementById('form-price').value = draft.price || '';
     document.getElementById('form-water-last').value = draft.waterLast || '';
     document.getElementById('form-water-freq').value = draft.waterFreq || '';
     document.getElementById('form-fert-last').value = draft.fertLast || '';
@@ -1917,7 +1918,6 @@ function openAddModal() {
     document.getElementById('form-favorited').checked = !!draft.favorited;
     document.getElementById('form-is-flowering').checked = !!draft.isFlowering;
     initTypeChips(draft.plantTypes || []);
-    document.getElementById('form-price').value = draft.price || '';
     initProblemsChips(draft.problems || []);
     mountCustomSelect('form-soil-wrap', 'form-soil', 'soil', SOIL_OPTIONS, draft.soil || '');
     mountCustomSelect('form-room-wrap', 'form-room', 'room', ROOM_OPTIONS, draft.room || '');
@@ -1960,6 +1960,7 @@ function openEditModal(plantId) {
   document.getElementById('form-name').value = plant.name;
   document.getElementById('form-description').value = plant.description || '';
   document.getElementById('form-purchased').value = plant.purchased_date || '';
+  document.getElementById('form-price').value = plant.price ?? '';
   document.getElementById('form-water-last').value = plant.watering.last_date || '';
   document.getElementById('form-water-freq').value = plant.watering.frequency_days || 7;
   document.getElementById('form-fert-last').value = plant.fertilizing.last_date || '';
@@ -1975,7 +1976,6 @@ function openEditModal(plantId) {
   document.getElementById('form-light').value = plant.light || '';
   mountCustomSelect('form-soil-wrap', 'form-soil', 'soil', SOIL_OPTIONS, plant.soil || '');
   mountCustomSelect('form-room-wrap', 'form-room', 'room', ROOM_OPTIONS, plant.room || '');
-  document.getElementById('form-price').value = plant.price ?? '';
   document.getElementById('form-needs-repotting').checked = !!plant.needs_repotting;
   document.getElementById('form-favorited').checked = !!plant.favorited;
   document.getElementById('form-is-flowering').checked = !!plant.is_flowering;
@@ -1995,6 +1995,7 @@ document.getElementById('plant-form').addEventListener('submit', async (e) => {
     name: document.getElementById('form-name').value.trim(),
     description: document.getElementById('form-description').value.trim(),
     purchased_date: document.getElementById('form-purchased').value,
+    price: document.getElementById('form-price').value,   // сервер чистит и валидирует
     plant_types: getSelectedTypes(),
     problems: getSelectedProblems(),
     watering_note: document.getElementById('form-watering-note').value,
@@ -2010,7 +2011,6 @@ document.getElementById('plant-form').addEventListener('submit', async (e) => {
       last_date: document.getElementById('form-water-last').value,
       frequency_days: parseInt(document.getElementById('form-water-freq').value) || null,
     },
-    price: document.getElementById('form-price').value,   // сервер чистит и валидирует
     fertilizing: {
       last_date: document.getElementById('form-fert-last').value,
       frequency_days: parseInt(document.getElementById('form-fert-freq').value) || 30,
@@ -3678,18 +3678,6 @@ function _destroyStatCharts() {
   });
 }
 
-function _chartTheme() {
-  const dark = document.body.classList.contains('dark');
-  return {
-    sage:     dark ? '#7FAB86' : '#6B8F71',
-    olive:    dark ? '#A5B88A' : '#8B9B6E',
-    sageDark: dark ? '#A5C9AA' : '#3D5C42',
-    grid:     dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)',
-    tick:     dark ? '#908C84' : '#8C8780',
-    bg:       dark ? '#1C1C1A' : '#FFFFFF',
-  };
-}
-
 function _monthLabels(count) {
   const now = new Date();
   const keys = [], labels = [];
@@ -3702,24 +3690,6 @@ function _monthLabels(count) {
 }
 
 // ── Achievements view ─────────────────────────────────────────────────────────
-async function renderAchievements() {
-  const container = document.getElementById('achievements-container');
-  if (!container) return;
-
-  if (cuttings.length === 0) {
-    try { cuttings = await api('GET', '/api/cuttings'); } catch(e) {}
-  }
-
-  const unlocked = ACHIEVEMENTS.filter(a => { try { return a.check(); } catch(e) { return false; } });
-  const locked   = ACHIEVEMENTS.filter(a => { try { return !a.check(); } catch(e) { return true; } });
-
-  const subtitle = document.getElementById('achievements-subtitle');
-  if (subtitle) subtitle.textContent = `${unlocked.length} из ${ACHIEVEMENTS.length} разблокировано`;
-
-  container.innerHTML = '';
-
-  // Category groups — show unlocked first within each group
-  const cats = [...new Set(ACHIEVEMENTS.map(a => a.cat))];
 // ── Achievement unlocks ───────────────────────────────────────────────────────
 // Conditions are evaluated here; the server only remembers which ones were earned
 // and when, so a toast fires once and the progress is shared across devices.
@@ -3837,6 +3807,24 @@ function _drainAchievementQueue() {
   });
 }
 
+async function renderAchievements() {
+  const container = document.getElementById('achievements-container');
+  if (!container) return;
+
+  if (cuttings.length === 0) {
+    try { cuttings = await api('GET', '/api/cuttings'); } catch(e) {}
+  }
+
+  const unlocked = ACHIEVEMENTS.filter(a => { try { return a.check(); } catch(e) { return false; } });
+  const locked   = ACHIEVEMENTS.filter(a => { try { return !a.check(); } catch(e) { return true; } });
+
+  const subtitle = document.getElementById('achievements-subtitle');
+  if (subtitle) subtitle.textContent = `${unlocked.length} из ${ACHIEVEMENTS.length} разблокировано`;
+
+  container.innerHTML = '';
+
+  // Category groups — show unlocked first within each group
+  const cats = [...new Set(ACHIEVEMENTS.map(a => a.cat))];
 
   cats.forEach(cat => {
     const inCat = ACHIEVEMENTS.filter(a => a.cat === cat);
@@ -3861,11 +3849,13 @@ function _drainAchievementQueue() {
       const isUnlocked = unlockedSet.has(a.id);
       const card = document.createElement('div');
       card.className = 'achievement-card ' + (isUnlocked ? 'unlocked' : 'locked');
+      const earnedOn = isUnlocked ? unlockedAchievements[a.id] : null;
       card.innerHTML = `
         ${isUnlocked ? '<div class="achievement-unlocked-badge">✓</div>' : ''}
         <div class="achievement-icon">${a.icon}</div>
         <div class="achievement-name">${a.name}</div>
         <div class="achievement-desc">${a.desc}</div>
+        ${earnedOn ? `<div class="achievement-date">${_fmtEarned(earnedOn)}</div>` : ''}
       `;
       grid.appendChild(card);
     });
@@ -3875,26 +3865,6 @@ function _drainAchievementQueue() {
   });
 }
 
-function renderStats() {
-  const container = document.getElementById('stats-container');
-  if (!container) return;
-  _destroyStatCharts();
-      const earnedOn = isUnlocked ? unlockedAchievements[a.id] : null;
-  container.innerHTML = '';
-
-  const ct = _chartTheme();
-
-  // ── KPI row ──────────────────────────────────────────────────────────────
-        ${earnedOn ? `<div class="achievement-date">${_fmtEarned(earnedOn)}</div>` : ''}
-  const overdueCount    = plants.filter(p => hasOverdueTasks(p)).length;
-  const favoritedCount  = plants.filter(p => p.favorited).length;
-  const floweringCount  = plants.filter(p => p.is_flowering).length;
-  const withProblems    = plants.filter(p => (p.problems || []).length > 0).length;
-  const needsRepotting  = plants.filter(p => p.needs_repotting).length;
-
-  const kpiRow = document.createElement('div');
-  kpiRow.className = 'stats-kpi-row';
-  [
 // Colours come from the design tokens in style.css so the charts follow the theme
 // instead of keeping their own copy of the palette.
 function _cssVar(name, fallback) {
@@ -3997,6 +3967,23 @@ function _careScoreStatus(score) {
 // ── Period switcher — one row above everything it scopes ─────────────────────
 function _buildStatsFilters() {
   const row = document.createElement('div');
+  row.className = 'stats-filters';
+  const seg = document.createElement('div');
+  seg.className = 'seg-control';
+  seg.setAttribute('role', 'group');
+  seg.setAttribute('aria-label', 'Период');
+  [[3, '3 месяца'], [6, 'Полгода'], [12, 'Год']].forEach(([months, label]) => {
+    const b = document.createElement('button');
+    b.className = 'seg-btn' + (statsMonths === months ? ' active' : '');
+    b.textContent = label;
+    b.setAttribute('aria-pressed', statsMonths === months ? 'true' : 'false');
+    b.addEventListener('click', () => { statsMonths = months; renderStats(); });
+    seg.appendChild(b);
+  });
+  row.appendChild(seg);
+  return row;
+}
+
 function renderStats() {
   const container = document.getElementById('stats-container');
   if (!container) return;
@@ -4049,18 +4036,18 @@ function renderStats() {
     .reduce((sum, p) => sum + p.price, 0);
 
   [
-  row.className = 'stats-filters';
-  const seg = document.createElement('div');
-  seg.className = 'seg-control';
-  seg.setAttribute('role', 'group');
-  seg.setAttribute('aria-label', 'Период');
-  [[3, '3 месяца'], [6, 'Полгода'], [12, 'Год']].forEach(([months, label]) => {
-    const b = document.createElement('button');
-    b.className = 'seg-btn' + (statsMonths === months ? ' active' : '');
-    b.textContent = label;
-    b.setAttribute('aria-pressed', statsMonths === months ? 'true' : 'false');
-    b.addEventListener('click', () => { statsMonths = months; renderStats(); });
-    seg.appendChild(b);
+    { icon: '🌿', value: plants.length,   label: 'Растений' },
+    { icon: '❤️', value: favoritedCount,  label: 'Избранных' },
+    { icon: '🌸', value: floweringCount,  label: 'Цветут' },
+    { icon: '⚠️', value: overdueCount,    label: 'Требуют ухода' },
+    { icon: '🐛', value: withProblems,    label: 'С вредителями' },
+    { icon: '🪴', value: needsRepotting,  label: 'Нужна пересадка' },
+  ].forEach(({ icon, value, label }) => {
+    const card = document.createElement('div');
+    card.className = 'stat-card';
+    card.innerHTML = `<div class="stat-card-icon">${icon}</div><div class="stat-card-value">${value}</div><div class="stat-card-label">${label}</div>`;
+    kpiRow.appendChild(card);
+  });
 
   if (priced.length) {
     const card = document.createElement('div');
@@ -4074,26 +4061,6 @@ function renderStats() {
       + `За выбранный период: ${formatPrice(spentInPeriod)}`;
     kpiRow.appendChild(card);
   }
-  });
-  row.appendChild(seg);
-  return row;
-}
-
-    { icon: '🌿', value: plants.length,   label: 'Растений' },
-    { icon: '❤️', value: favoritedCount,  label: 'Избранных' },
-    { icon: '🌸', value: floweringCount,  label: 'Цветут' },
-    { icon: '⚠️', value: overdueCount,    label: 'Требуют ухода' },
-    { icon: '🐛', value: withProblems,    label: 'С вредителями' },
-    { icon: '🪴', value: needsRepotting,  label: 'Нужна пересадка' },
-  ].forEach(({ icon, value, label }) => {
-  const MONTHS = statsMonths;
-
-  container.appendChild(_buildStatsFilters());
-    const card = document.createElement('div');
-    card.className = 'stat-card';
-    card.innerHTML = `<div class="stat-card-icon">${icon}</div><div class="stat-card-value">${value}</div><div class="stat-card-label">${label}</div>`;
-    kpiRow.appendChild(card);
-  });
   container.appendChild(kpiRow);
 
   // ── New plants by month (bar) + cumulative line — two columns ────────────
@@ -4124,20 +4091,22 @@ function renderStats() {
         datasets: [{
           label: 'Новых',
           data: newCounts,
-          backgroundColor: ct.sage + 'BB',
-          borderColor: ct.sage,
-          borderWidth: 1.5,
-          borderRadius: 6,
+          backgroundColor: ct.sage,
+          borderRadius: 4,
           borderSkipped: false,
+          maxBarThickness: 34,
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} новых` } },
+        },
         scales: {
-          x: { grid: { color: ct.grid }, ticks: { color: ct.tick, font: { size: 11 } } },
-          y: { grid: { color: ct.grid }, ticks: { color: ct.tick, font: { size: 11 }, stepSize: 1 }, beginAtZero: true },
+          x: _axis(ct, { rest: { grid: { display: false } } }),
+          y: _axis(ct, { ticks: { stepSize: 1 }, rest: { beginAtZero: true } }),
         }
       }
     });
@@ -4157,18 +4126,24 @@ function renderStats() {
           label: 'Растений',
           data: cumCounts,
           borderColor: ct.sageDark,
-          backgroundColor: ct.sageDark + '22',
-          borderWidth: 2.5,
-          tension: 0.4,
+          backgroundColor: ct.sageDark + '1F',
+          borderWidth: 2,
+          tension: 0.35,
           fill: true,
-          pointRadius: 4,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          pointHitRadius: 24,
           pointBackgroundColor: ct.sageDark,
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} растений` } },
+        },
         scales: {
           x: _axis(ct, { rest: { grid: { display: false } } }),
           y: _axis(ct, { ticks: { stepSize: 1 }, rest: { beginAtZero: true } }),
@@ -4273,8 +4248,14 @@ function renderStats() {
     twoCol.className = 'dashboard-charts-2';
 
     if (hasTypes) {
-      const typeEntries = Object.entries(types).sort((a, b) => b[1] - a[1]);
-      const palette = [ct.sage, ct.olive, ct.sageDark, '#B5C99A', '#D4E6D1', '#8FA68B', '#C4D7C8'];
+      // Past six slices neighbouring colours stop being tellable apart — the tail
+      // folds into "Другое" instead of inventing more greens.
+      let typeEntries = Object.entries(types).sort((a, b) => b[1] - a[1]);
+      if (typeEntries.length > 6) {
+        const tail = typeEntries.slice(5).reduce((sum, [, v]) => sum + v, 0);
+        typeEntries = [...typeEntries.slice(0, 5), ['🪴 Другое', tail]];
+      }
+      const palette = ct.ramp.slice(0, typeEntries.length);
       const card = document.createElement('div');
       card.className = 'dashboard-chart-card';
       card.style.marginBottom = '0';
@@ -4290,9 +4271,10 @@ function renderStats() {
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          cutout: '62%',
+          cutout: '64%',
           plugins: {
-            legend: { position: 'right', labels: { color: ct.tick, font: { size: 11 }, boxWidth: 12, padding: 8 } }
+            legend: { position: 'right', labels: { color: ct.tick, font: { size: 11 }, boxWidth: 9, boxHeight: 9, usePointStyle: true, pointStyle: 'circle', padding: 10 } },
+            tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} растений` } },
           }
         }
       });
@@ -4313,21 +4295,23 @@ function renderStats() {
           datasets: [{
             label: 'Растений',
             data: roomEntries.map(([, v]) => v),
-            backgroundColor: ct.olive + 'BB',
-            borderColor: ct.olive,
-            borderWidth: 1.5,
-            borderRadius: 6,
+            backgroundColor: ct.sage,
+            borderRadius: 4,
             borderSkipped: false,
+            maxBarThickness: 18,
           }]
         },
         options: {
           indexAxis: 'y',
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x} растений` } },
+          },
           scales: {
-            x: { grid: { color: ct.grid }, ticks: { color: ct.tick, font: { size: 11 }, stepSize: 1 }, beginAtZero: true },
-            y: { grid: { display: false }, ticks: { color: ct.tick, font: { size: 11 } } },
+            x: _axis(ct, { ticks: { stepSize: 1 }, rest: { beginAtZero: true } }),
+            y: _axis(ct, { rest: { grid: { display: false } } }),
           }
         }
       });
@@ -4368,34 +4352,39 @@ function renderStats() {
           {
             label: 'Поливы',
             data: waterCounts,
-            borderColor: ct.sage,
-            backgroundColor: ct.sage + '22',
+            borderColor: ct.duo.a,
+            backgroundColor: ct.duo.a + '1A',
             borderWidth: 2,
-            tension: 0.4,
+            tension: 0.35,
             fill: true,
-            pointRadius: 3,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+            pointHitRadius: 24,
           },
           {
             label: 'Подкормки',
             data: fertCounts,
-            borderColor: ct.olive,
-            backgroundColor: ct.olive + '22',
+            borderColor: ct.duo.b,
+            backgroundColor: 'transparent',
             borderWidth: 2,
-            tension: 0.4,
-            fill: true,
-            pointRadius: 3,
+            tension: 0.35,
+            fill: false,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+            pointHitRadius: 24,
           }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
         plugins: {
-          legend: { labels: { color: ct.tick, font: { size: 11 }, boxWidth: 12, padding: 10 } }
+          legend: { position: 'bottom', labels: { color: ct.tick, font: { size: 11 }, boxWidth: 9, boxHeight: 9, usePointStyle: true, pointStyle: 'circle', padding: 14 } }
         },
         scales: {
-          x: { grid: { color: ct.grid }, ticks: { color: ct.tick, font: { size: 11 } } },
-          y: { grid: { color: ct.grid }, ticks: { color: ct.tick, font: { size: 11 }, stepSize: 1 }, beginAtZero: true },
+          x: _axis(ct, { rest: { grid: { display: false } } }),
+          y: _axis(ct, { ticks: { stepSize: 1 }, rest: { beginAtZero: true } }),
         }
       }
     });
@@ -4514,6 +4503,8 @@ function buildBackupSection() {
       status.textContent = `✅ Восстановлено: файлов данных ${out.data}, фото ${out.photos}. Обновляю...`;
       await loadPlants();
       await loadSowings();
+      try { cuttings = await api('GET', '/api/cuttings'); } catch(e) {}
+      await syncAchievements();  // the ZIP carries its own achievement progress
       renderStats();
       showToast('♻️ Данные восстановлены!', 'repot');
     } catch (err) {
@@ -4526,8 +4517,6 @@ function buildBackupSection() {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 loadSowings(); // preload so sprout reminders appear on "Сегодня"
-      try { cuttings = await api('GET', '/api/cuttings'); } catch(e) {}
-      await syncAchievements();  // the ZIP carries its own achievement progress
 
 (async () => {
   await loadPlants();

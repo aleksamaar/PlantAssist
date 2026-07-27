@@ -1,35 +1,57 @@
 /* ── Design tokens ────────────────────────────────────────────────────────── */
+/* Палитра редизайна «Sage + Terracotta»: тёплые нейтралы, тёмно-зелёный сайдбар. */
 :root {
-  /* Brand palette */
-  --sage:        #6B8F71;
-  --sage-light:  #EEF4EF;
-  --sage-dark:   #3D5C42;
-  --olive:       #8B9B6E;
+  /* Brand */
+  --sage:         #93A588;
+  --sage-light:   #E8EDE1;
+  --sage-dark:    #38492F;   /* текст и иконки акцентом */
+  --sage-dark-bg: #38492F;   /* заливка: сайдбар, кнопки, активный чип —
+                                НЕ переопределяется в тёмной теме */
+  --olive:        #8B9B6E;
+  --terracotta:       #B5551F;
+  --terracotta-light: #F2DCC0;
 
-  /* State colors — minimal, only for indicators */
+  /* Semantic state colors */
   --green:       #4CAF6B;
   --green-light: #E8F5EC;
   --green-dark:  #2D6A3F;
   --yellow:      #E8A838;
   --yellow-light:#FFF4DC;
-  --red:         #D64045;
-  --red-light:   #FDECED;
+  --yellow-text: #9A6B00;
+  --red:         #C6353B;
+  --red-light:   #FBE7E8;
+  --red-muted:   #BD8078;   /* только кольцо карточки «есть проблемы» */
+  --blue:        #4A90D9;
+  --blue-text:   #1A5EA8;
+
+  /* Task-type accents (chips) */
+  --task-water-bg:     #E3F2FD; --task-water-fg:     #1565C0;
+  --task-fertilize-bg: #F3E5F5; --task-fertilize-fg: #6A1B9A;
+  --task-repot-bg:     #FFF3E0; --task-repot-fg:     #E65100;
+  --task-pest-bg:      #FCE4EC; --task-pest-fg:      #880E4F;
+  --task-vitamins-bg:  #EDE7F6; --task-vitamins-fg:  #311B92;
 
   /* Neutrals — warm tinted */
-  --bg:          #F5F3EF;
+  --bg:          #F5F1EA;
   --white:       #FFFFFF;
-  --gray-light:  #F0EDE8;
-  --gray:        #A8A39A;
-  --border:      #E4E0D8;
+  --gray-light:  #F1ECE4;
+  --gray:        #A39A8B;
+  --border:      #E8E0D3;
+
+  /* Charts: одиночные серии — --chart-2, сегменты пончика — chart-1..6 */
+  --chart-1: #38492F;
+  --chart-2: #5C7350;
+  --chart-3: #C9D3BE;
+  --chart-4: #B5551F;
+  --chart-5: #D9A6B5;
+  --chart-6: #E8E0D3;
 
   /* Typography */
-  --text:        #25231F;
-  --text-muted:  #8C8780;
-
-  /* Legacy alias used by inline JS styles */
+  --text:        #2E2A24;
+  --text-muted:  #9C9284;
   --text-secondary: var(--text-muted);
 
-  /* Shadows */
+  /* Shadows — тёплые и мягкие, жёстких теней нет */
   --shadow-sm:   0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
   --shadow-md:   0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
   --shadow-lg:   0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
@@ -38,6 +60,15 @@
   --radius:      16px;
   --radius-sm:   10px;
   --radius-xs:   6px;
+
+  /* Spacing scale */
+  --space-1: 4px;  --space-2: 6px;  --space-3: 10px; --space-4: 14px;
+  --space-5: 18px; --space-6: 24px; --space-7: 32px; --space-8: 36px;
+
+  /* Layout */
+  --sidebar-width: 228px;
+  --grid-gap: 18px;
+  --card-min: 210px;   /* макет допускает 210–240; в эталоне минимум 210 */
 }
 
 /* ── Reset ────────────────────────────────────────────────────────────────── */
@@ -45,7 +76,7 @@
 button { font-family: inherit; }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -60,10 +91,12 @@ body {
 }
 
 /* ── Sidebar ──────────────────────────────────────────────────────────────── */
+/* Тёмно-зелёная заливка одна в обеих темах; границ и разделителей внутри нет —
+   убраны намеренно, ради чистого силуэта. */
 .sidebar {
-  width: 228px;
-  background: var(--white);
-  border-right: 1px solid var(--border);
+  width: var(--sidebar-width);
+  background: var(--sage-dark-bg);
+  border-right: none;
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -72,20 +105,20 @@ body {
 }
 
 .sidebar-logo {
-  padding: 24px 20px 20px;
+  padding: 28px 22px 22px;
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--sage-dark);
-  border-bottom: 1px solid var(--border);
-  letter-spacing: -0.3px;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #fff;
+  border-bottom: none;
+  letter-spacing: -0.4px;
   flex-shrink: 0;
 }
 .logo-icon {
-  width: 20px; height: 20px;
-  color: var(--sage);
+  width: 22px; height: 22px;
+  color: #A8C29B;
   flex-shrink: 0;
 }
 
@@ -109,27 +142,27 @@ body {
   text-align: left;
   width: 100%;
   font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-muted);
+  font-weight: 600;
+  color: rgba(255,255,255,0.8);
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
   position: relative;
 }
 .sidebar-nav-btn:hover:not(.active) {
-  background: var(--gray-light);
-  color: var(--text);
+  background: rgba(255,255,255,0.08);
+  color: #fff;
 }
 .sidebar-nav-btn.active {
-  background: var(--sage-light);
-  color: var(--sage-dark);
-  font-weight: 600;
+  background: rgba(255,255,255,0.16);
+  color: #fff;
+  font-weight: 700;
 }
 .sidebar-nav-btn.active::before {
   content: '';
   position: absolute;
   left: 0; top: 4px; bottom: 4px;
   width: 3px;
-  background: var(--sage);
+  background: #fff;
   border-radius: 0 2px 2px 0;
 }
 .sidebar-nav-btn .nav-icon {
@@ -140,7 +173,7 @@ body {
 
 .sidebar-bottom {
   padding: 14px 10px;
-  border-top: 1px solid var(--border);
+  border-top: none;
   flex-shrink: 0;
 }
 .theme-toggle-btn {
@@ -153,19 +186,19 @@ body {
   border: none;
   border-radius: var(--radius-sm);
   font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-muted);
+  font-weight: 600;
+  color: rgba(255,255,255,0.8);
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
 }
-.theme-toggle-btn:hover { background: var(--gray-light); color: var(--text); }
+.theme-toggle-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
 .theme-toggle-btn .nav-icon { width: 17px; height: 17px; flex-shrink: 0; }
 
 /* ── Main content ─────────────────────────────────────────────────────────── */
 main {
   flex: 1;
-  margin-left: 228px;
-  padding: 32px 36px;
+  margin-left: var(--sidebar-width);
+  padding: var(--space-7) var(--space-8);
   min-height: 100vh;
   max-width: 100%;
 }
@@ -195,12 +228,52 @@ main {
   font-weight: 400;
 }
 
+/* ── Шапка «Сегодня» ──────────────────────────────────────────────────────── */
+/* Растягивается на поля main (-32/-36), чтобы фото уходило за край экрана. */
+.hero-header {
+  position: relative;
+  box-sizing: border-box;
+  margin: -32px -36px 0;
+  padding: 30px 36px 26px;
+  overflow: hidden;
+}
+.hero-header > .view-header { position: relative; z-index: 1; width: 100%; }
+.greeting-sub { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 2px; }
+/* Фото гасится маской к левому нижнему углу — мягкий переход в фон вместо
+   резкой границы. */
+.hero-plant {
+  position: absolute;
+  top: 0; right: -36px; bottom: 0;
+  width: 440px;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom left, black 25%, transparent 82%);
+  mask-image: linear-gradient(to bottom left, black 25%, transparent 82%);
+}
+.hero-plant img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hero-plant-placeholder {
+  width: 100%; height: 100%;
+  background: repeating-linear-gradient(135deg,
+    var(--sage-light), var(--sage-light) 10px, #DDE6D6 10px, #DDE6D6 20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.55;
+}
+.hero-plant-placeholder span {
+  font-family: monospace;
+  font-size: 0.7rem;
+  color: var(--sage-dark);
+  background: rgba(255,255,255,0.6);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
 .btn-primary {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--sage-dark);
+  background: var(--sage-dark-bg);   /* заливка, поэтому -bg, а не --sage-dark */
   color: #fff;
   border: none;
   border-radius: var(--radius-sm);
@@ -211,7 +284,7 @@ main {
   transition: background 0.15s, transform 0.1s;
   white-space: nowrap;
 }
-.btn-primary:hover { background: var(--sage); transform: translateY(-1px); }
+.btn-primary:hover { background: #46593B; transform: translateY(-1px); }
 .btn-primary:active { transform: translateY(0); }
 
 .btn-secondary {
@@ -305,9 +378,11 @@ main {
   color: var(--text-muted);
 }
 .type-filter-btn:hover:not(.active) { background: var(--gray-light); color: var(--text); }
+/* Фильтр-чип активен — сплошная тёмно-зелёная заливка; чип сортировки — мягкая
+   светлая. Две разные роли, поэтому и заливки разные. */
 .type-filter-btn.active {
-  border-color: var(--sage-dark);
-  background: var(--sage-dark);
+  border-color: var(--sage-dark-bg);
+  background: var(--sage-dark-bg);
   color: #fff;
   font-weight: 600;
 }
@@ -331,8 +406,8 @@ main {
 /* ── Plants grid ──────────────────────────────────────────────────────────── */
 .plants-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(var(--card-min), 1fr));
+  gap: var(--grid-gap);
 }
 
 /* ── Plant card ───────────────────────────────────────────────────────────── */
@@ -350,8 +425,10 @@ main {
   transform: translateY(-4px);
   box-shadow: var(--shadow-md);
 }
-.plant-card.has-problems { box-shadow: var(--shadow-sm), inset 0 0 0 2px var(--red); }
-.plant-card.has-problems:hover { box-shadow: var(--shadow-md), inset 0 0 0 2px var(--red); }
+/* Пыльный приглушённый красный, а не яркий --red: на тёплом фоне тот читается
+   слишком резко. */
+.plant-card.has-problems { box-shadow: var(--shadow-sm), inset 0 0 0 2px var(--red-muted); }
+.plant-card.has-problems:hover { box-shadow: var(--shadow-md), inset 0 0 0 2px var(--red-muted); }
 
 /* Photo */
 .plant-photo {
@@ -372,7 +449,7 @@ main {
 .plant-photo-placeholder {
   width: 100%;
   height: 200px;
-  background: linear-gradient(145deg, #EEF4EF, #D4E6D6);
+  background: linear-gradient(145deg, var(--sage-light), #D4E6D6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -420,16 +497,33 @@ main {
   border: none;
   border-radius: 50%;
   width: 34px; height: 34px;
-  font-size: 1rem;
+  color: var(--text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.15s, background 0.15s;
+  transition: transform 0.15s, background 0.15s, color 0.15s;
   backdrop-filter: blur(6px);
   z-index: 2;
 }
+.card-heart-btn.fav { color: var(--red); }
 .card-heart-btn:hover { transform: scale(1.2); background: rgba(255,255,255,1); }
+.card-heart-btn svg, .fav-heart svg { transform: scaleY(1.18); }
+
+/* Маленький значок на кружке любимого растения */
+.fav-heart {
+  position: absolute;
+  top: 2px; right: 2px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.9);
+  color: var(--red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+.fav-heart svg { width: 11px; height: 11px; }
 
 /* Card body */
 .plant-body {
@@ -497,33 +591,25 @@ main {
 }
 
 /* Card footer — quick action buttons */
+/* Разделитель втянут по бокам (12px), а не во всю ширину — иначе он упирается
+   в кольцо карточки «есть проблемы». */
 .card-footer {
   padding: 10px 12px 12px;
   display: flex;
   gap: 6px;
-  border-top: 1px solid var(--gray-light);
+  position: relative;
+}
+.card-footer::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 12px; right: 12px;
+  height: 1px;
+  background: var(--gray-light);
 }
 .card-action-btn {
   flex: 1;
   padding: 8px 4px 7px;
-.card-heart-btn.fav { color: var(--red); }
   border: none;
-.card-heart-btn svg, .fav-heart svg { transform: scaleY(1.18); }
-
-/* Маленький значок на кружке любимого растения */
-.fav-heart {
-  position: absolute;
-  top: 2px; right: 2px;
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.9);
-  color: var(--red);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2;
-}
-.fav-heart svg { width: 11px; height: 11px; }
   border-radius: var(--radius-sm);
   background: var(--gray-light);
   font-size: 0.68rem;
@@ -592,6 +678,7 @@ main {
   align-items: center;
   gap: 6px;
   cursor: pointer;
+  position: relative;   /* якорь для значка-сердца: сам кружок обрезает по кругу */
 }
 .fav-plant-photo {
   width: 72px; height: 72px;
@@ -678,7 +765,6 @@ main {
 .plant-group-header {
   grid-column: 1 / -1;
   font-size: 0.85rem;
-  position: relative;   /* якорь для значка-сердца: сам кружок обрезает по кругу */
   font-weight: 700;
   color: var(--sage-dark);
   padding: 10px 2px 4px;
@@ -1117,7 +1203,7 @@ main {
   font-size: 0.75rem;
   font-weight: 600;
 }
-.cutting-status.rooting { background: #E3F2FD; color: #1565C0; }
+.cutting-status.rooting { background: var(--task-water-bg); color: var(--blue-text); }
 .cutting-status.rooted  { background: var(--green-light); color: var(--green-dark); }
 .cutting-status.planted { background: var(--sage-light); color: var(--sage-dark); }
 .cutting-status.failed  { background: var(--red-light); color: var(--red); }
@@ -1128,31 +1214,33 @@ main {
 
 .cal-kpi-row {
   display: flex;
-  gap: 10px;
+  gap: 14px;
   flex-wrap: wrap;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
 }
+/* Рамка целиком, а не полоска слева: цвет рамки и есть индикатор тяжести. */
 .cal-kpi-chip {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 14px;
   background: var(--white);
   border-radius: var(--radius-sm);
-  padding: 10px 16px;
-  box-shadow: var(--shadow-sm);
-  border-left: 3px solid var(--border);
+  padding: 14px 18px;
+  box-shadow: none;
+  border: 1.5px solid var(--border);
   flex: 1;
-  min-width: 140px;
+  min-width: 210px;
 }
-.cal-kpi-chip.kpi-danger { border-left-color: var(--red); }
-.cal-kpi-chip.kpi-warn   { border-left-color: #E8A020; }
-.cal-kpi-chip.kpi-ok     { border-left-color: var(--sage); }
+.cal-kpi-chip.kpi-danger { border-color: var(--red-muted); }
+.cal-kpi-chip.kpi-warn   { border-color: var(--yellow); }
+.cal-kpi-chip.kpi-ok     { border-color: var(--green); }
+body.dark .cal-kpi-chip  { box-shadow: none; }
 .cal-kpi-val {
-  font-size: 1.6rem;
+  font-size: 1.7rem;
   font-weight: 800;
   color: var(--text);
   line-height: 1;
-  letter-spacing: -1px;
+  letter-spacing: -0.5px;
 }
 .cal-kpi-lbl {
   font-size: 0.75rem;
@@ -1264,7 +1352,7 @@ main {
 }
 .cal-th-date.col-today .cal-th-num { color: var(--sage-dark); font-size: 1.15rem; }
 .cal-th-date.col-today .cal-th-wd  { color: var(--sage); font-weight: 700; }
-.cal-th-date.col-overdue { background: rgba(220,53,69,0.06); border-top: 3px solid rgba(220,53,69,0.35); }
+.cal-th-date.col-overdue { background: var(--red-light); border-top: 3px solid var(--red-muted); }
 .cal-th-date.col-overdue .cal-th-num { color: var(--red); opacity: 0.8; }
 .cal-th-date.col-tomorrow .cal-th-num { color: #A07000; }
 .cal-th-date:not(.col-today):not(.col-overdue) { border-top: 3px solid transparent; }
@@ -1311,8 +1399,10 @@ main {
   vertical-align: middle;
   min-width: 46px;
 }
-.cal-td-task.col-today   { background: rgba(107,143,113,0.07); }
-.cal-td-task.col-overdue { background: rgba(220,53,69,0.04); }
+/* Тонировка колонок берётся из токенов, чтобы тёмная тема не осталась
+   с полупрозрачным зелёным поверх тёмного фона. */
+.cal-td-task.col-today   { background: var(--sage-light); }
+.cal-td-task.col-overdue { background: var(--red-light); }
 
 /* Row zebra + hover */
 .cal-table tbody tr:nth-child(even) .cal-td-plant { background: #FAFAF8; }
@@ -1341,11 +1431,11 @@ main {
 
 body.dark .cal-table,
 body.dark .cal-td-plant,
-body.dark .cal-table-wrap { background: #1C1C1A; }
+body.dark .cal-table-wrap { background: var(--white); }
 body.dark .cal-month-row th,
 body.dark .cal-th-plant,
-body.dark .cal-th-date { background: #252522; }
-body.dark .cal-table tbody tr:nth-child(even) .cal-td-plant { background: #202020; }
+body.dark .cal-th-date { background: var(--gray-light); }
+body.dark .cal-table tbody tr:nth-child(even) .cal-td-plant { background: var(--bg); }
 
 /* ── Achievements ─────────────────────────────────────────────────────────── */
 .achievements-header {
@@ -1392,7 +1482,7 @@ body.dark .cal-table tbody tr:nth-child(even) .cal-td-plant { background: #20202
   box-shadow: 0 6px 20px rgba(107,143,113,0.18);
 }
 .achievement-card.locked {
-  opacity: 0.38;
+  opacity: 0.45;
   filter: grayscale(0.8);
 }
 .achievement-icon {
@@ -1437,145 +1527,18 @@ body.dark .cal-table tbody tr:nth-child(even) .cal-td-plant { background: #20202
 }
 .achievement-unlocked-badge {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 14px;
-  height: 14px;
+  top: 8px;
+  right: 8px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  background: var(--sage);
+  background: var(--sage-dark-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.55rem;
   color: #fff;
 }
-
-/* ── Statistics / BI Dashboard ────────────────────────────────────────────── */
-.stats-kpi-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 12px;
-  margin-bottom: 24px;
-}
-.stat-card {
-  background: var(--white);
-  border-radius: var(--radius);
-  padding: 18px 16px;
-  box-shadow: var(--shadow-sm);
-}
-.stat-card-icon { font-size: 1.5rem; margin-bottom: 8px; }
-.stat-card-value { font-size: 2rem; font-weight: 800; color: var(--text); letter-spacing: -1px; line-height: 1; }
-.stat-card-label { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
-
-.dashboard-wide { grid-column: 1 / -1; }
-.dashboard-charts-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-.dashboard-chart-card {
-  background: var(--white);
-  border-radius: var(--radius);
-  padding: 20px 20px 16px;
-  box-shadow: var(--shadow-sm);
-  margin-bottom: 16px;
-}
-.chart-card-title {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: var(--text-muted);
-  margin-bottom: 16px;
-}
-
-.stats-section-title { font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 12px; }
-.stats-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 24px; }
-.stats-list-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--white);
-  border-radius: var(--radius-sm);
-  padding: 10px 16px;
-  box-shadow: var(--shadow-sm);
-}
-.stats-list-label { font-size: 0.85rem; font-weight: 500; color: var(--text); }
-.stats-list-count {
-  background: var(--sage-light);
-  color: var(--sage-dark);
-  border-radius: 10px;
-  padding: 2px 10px;
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-body.dark .stat-card,
-body.dark .dashboard-chart-card,
-body.dark .stats-list-row { background: #1C1C1A; }
-
-@media (max-width: 768px) {
-  .dashboard-charts-2 { grid-template-columns: 1fr; }
-}
-
-/* ── Archive ──────────────────────────────────────────────────────────────── */
-/* Две кнопки в ряд. min-width:0 обязателен: по умолчанию у flex-элемента
-   min-width:auto, поэтому кнопка не ужимается уже своего текста и вылезает
-   за карточку. Поля и кегль тоже поджаты — карточка бывает всего 210px. */
-.archive-card-actions {
-  display: flex;
-  flex-wrap: wrap;      /* в узкой карточке кнопки встают в столбик, а не режутся */
-  gap: 8px;
-  padding: 0 14px 14px;
-}
-.archive-card-actions > button {
-  /* 118px — ширина, при которой «↩ Восстановить» ещё читается целиком.
-     Не влезли вдвоём — переносятся и занимают всю ширину карточки. */
-  flex: 1 1 118px;
-  min-width: 0;
-  justify-content: center;
-  padding: 9px 8px;
-  font-size: 0.8rem;
-}
-.archive-card-reason { font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; font-style: italic; }
-.archive-card-date { font-size: 0.75rem; color: var(--text-muted); }
-
-/* ── Plants stats count ───────────────────────────────────────────────────── */
-#plants-stats {
-  font-size: 0.83rem;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-
-/* ── Dark theme ───────────────────────────────────────────────────────────── */
-body.dark {
-  --sage:        #7FAB86;
-  --sage-light:  #1A2C1E;
-  --sage-dark:   #A5C9AA;
-  --green:       #5CBF78;
-  --green-light: #162A1A;
-  --green-dark:  #8CC697;
-  --yellow:      #E8A838;
-  --yellow-light:#2A2000;
-  --red:         #E05A5E;
-  --red-light:   #2D1415;
-  --bg:          #141412;
-  --white:       #1C1C1A;
-  --gray-light:  #252522;
-  --gray:        #6E6A62;
-  --border:      #343330;
-  --text:        #E8E5DF;
-  --text-muted:  #908C84;
-  --shadow-sm:   0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
-  --shadow-md:   0 4px 16px rgba(0,0,0,0.4), 0 1px 4px rgba(0,0,0,0.2);
-  --shadow-lg:   0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3);
-  background: #141412;
-  color: #E8E5DF;
-}
-body.dark .sidebar { background: #1C1C1A; border-color: #343330; }
-body.dark .sidebar-logo { color: #A5C9AA; border-color: #343330; }
-body.dark .sidebar-nav-btn.active { background: #1A2C1E; color: #A5C9AA; }
 .achievement-date {
   font-size: 0.62rem;
   color: var(--text-muted);
@@ -1638,47 +1601,47 @@ body.dark .sidebar-nav-btn.active { background: #1A2C1E; color: #A5C9AA; }
   .achievement-toast { transition: opacity 0.2s ease; }
   .achievement-toast.in, .achievement-toast.out { transform: translate(-50%, 0); }
 }
-body.dark .sidebar-nav-btn:hover:not(.active) { background: #252522; color: #E8E5DF; }
-body.dark .sidebar-bottom { border-color: #343330; }
-body.dark .theme-toggle-btn:hover { background: #252522; }
-body.dark .modal-content,
-body.dark .modal-header { background: #1C1C1A; }
-body.dark .detail-section { background: #252522; }
-body.dark .plant-photo-placeholder { background: linear-gradient(145deg, #1A2C1E, #1B3020); }
-body.dark input, body.dark textarea, body.dark select {
-  background: #252522; color: #E8E5DF; border-color: #343330;
+
+/* ── Statistics / BI Dashboard ────────────────────────────────────────────── */
+.stats-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
 }
-body.dark input::placeholder { color: #6E6A62; }
-body.dark input:focus, body.dark textarea:focus, body.dark select:focus {
-  border-color: var(--sage);
-  box-shadow: 0 0 0 3px rgba(127, 171, 134, 0.15);
+.stat-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 18px 16px;
+  box-shadow: var(--shadow-sm);
 }
-body.dark .task-chip.water { background: #0D2137; color: #90CAF9; }
-body.dark .task-chip.fertilize { background: #1E0D26; color: #CE93D8; }
-body.dark .task-chip.repot { background: #2A1500; color: #FFCC80; }
-body.dark .task-chip.pest_control { background: #2D0D1A; color: #F48FB1; }
-body.dark .task-chip.vitamins { background: #1A1A3E; color: #B39DDB; }
-body.dark .detail-section-action.water { background: #0D2137; color: #90CAF9; }
-body.dark .detail-section-action.fertilize { background: #1E0D26; color: #CE93D8; }
-body.dark .detail-section-action.repot { background: #2A1500; color: #FFCC80; }
-body.dark .detail-section-action.pest_control { background: #2D0D1A; color: #F48FB1; }
-body.dark .detail-section-action.vitamins { background: #1A1A3E; color: #B39DDB; }
-body.dark .card-action-btn { background: #252522; color: #908C84; }
-body.dark .card-action-btn:hover { background: #1A2C1E; color: #A5C9AA; }
-body.dark .card-action-btn.done { background: #1A2C1E; color: #A5C9AA; }
-body.dark .history-date { background: #252522; border-color: #343330; }
-body.dark .sort-btn, body.dark .type-filter-btn, body.dark .bulk-action-btn, body.dark .type-chip {
-  background: #252522; color: #908C84; border-color: #343330;
+.stat-card-icon { font-size: 1.5rem; margin-bottom: 8px; }
+.stat-card-value { font-size: 2rem; font-weight: 800; color: var(--text); letter-spacing: -1px; line-height: 1; }
+.stat-card-label { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
+
+.dashboard-wide { grid-column: 1 / -1; }
+.dashboard-charts-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
 }
-body.dark .sort-btn.active, body.dark .type-filter-btn.active { background: #1A2C1E; color: #A5C9AA; border-color: #2A4030; }
-body.dark .type-chip.selected { background: #1A2C1E; color: #A5C9AA; border-color: #2A4030; }
-body.dark .date-badge.ok { background: #162A1A; color: #8CC697; }
-body.dark .date-badge.soon { background: #2A2000; color: #E8A838; }
-body.dark .date-badge.overdue { background: #2D1415; color: #E05A5E; }
-body.dark .date-badge.none { background: #252522; color: #6E6A62; }
-body.dark .btn-primary { background: #3D7045; }
-body.dark .btn-primary:hover { background: #4D8055; }
-body.dark .btn-secondary { background: #252522; color: #E8E5DF; border-color: #343330; }
+.dashboard-chart-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 20px 20px 16px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
+}
+.chart-card-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
 /* ── Period switcher — one row, scopes every chart below it ───────────────── */
 .stats-filters {
   display: flex;
@@ -1752,52 +1715,192 @@ body.dark .btn-secondary { background: #252522; color: #E8E5DF; border-color: #3
 body.dark .kpi-delta.good { color: #0ca30c; }
 body.dark .kpi-delta.bad  { color: #e66767; }
 
-body.dark .btn-secondary:hover { background: #343330; }
-body.dark .btn-danger { background: #2D1415; color: #E05A5E; border-color: #5A2020; }
-body.dark .gallery-add-btn { color: #6E6A62; border-color: #343330; }
-body.dark .gallery-add-btn:hover { border-color: var(--sage); color: #A5C9AA; background: #1A2C1E; }
-body.dark .gallery-cover { background: #252522; }
-body.dark .gallery-thumb img { border-color: #343330; }
-body.dark .today-summary-card { background: #1C1C1A; }
-body.dark .today-summary-card.ok { background: #1A2C1E; }
-body.dark .today-summary-card.ok .today-summary-label { color: #A5C9AA; }
-body.dark .today-summary-card.ok .today-summary-count { color: #A5C9AA; }
-body.dark .fav-plant-photo { border-color: #1C1C1A; }
-body.dark .status-text.ok { color: #8CC697; }
+.stats-section-title { font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 12px; }
+.stats-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 24px; }
+.stats-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--white);
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  box-shadow: var(--shadow-sm);
+}
+.stats-list-label { font-size: 0.85rem; font-weight: 500; color: var(--text); }
+.stats-list-count {
+  background: var(--sage-light);
+  color: var(--sage-dark);
+  border-radius: 10px;
+  padding: 2px 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+body.dark .stat-card,
+body.dark .dashboard-chart-card,
+body.dark .stats-list-row { background: var(--white); }
+
+@media (max-width: 768px) {
+  .dashboard-charts-2 { grid-template-columns: 1fr; }
+  .stats-kpi-row { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+}
+
+/* ── Archive ──────────────────────────────────────────────────────────────── */
+/* Две кнопки в ряд. min-width:0 обязателен: по умолчанию у flex-элемента
+   min-width:auto, поэтому кнопка не ужимается уже своего текста и вылезает
+   за карточку. Поля и кегль тоже поджаты — карточка бывает всего 210px. */
+.archive-card-actions {
+  display: flex;
+  flex-wrap: wrap;      /* в узкой карточке кнопки встают в столбик, а не режутся */
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+.archive-card-actions > button {
+  /* 118px — ширина, при которой «↩ Восстановить» ещё читается целиком.
+     Не влезли вдвоём — переносятся и занимают всю ширину карточки. */
+  flex: 1 1 118px;
+  min-width: 0;
+  justify-content: center;
+  padding: 9px 8px;
+  font-size: 0.8rem;
+}
+.archive-card-reason { font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; font-style: italic; }
+.archive-card-date { font-size: 0.75rem; color: var(--text-muted); }
+
+/* ── Plants stats count ───────────────────────────────────────────────────── */
+#plants-stats {
+  font-size: 0.83rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* ── Dark theme ───────────────────────────────────────────────────────────── */
+/* Мягкая тёмная, не «высококонтрастная»: фон тёплый тёмный, текст не чисто белый.
+   --sage-dark-bg намеренно НЕ переопределён — заливка сайдбара одна в обеих темах,
+   иначе он превращается в ярко-салатовый. */
+body.dark {
+  --bg:          #221F1A;
+  --white:       #2A2823;
+  --gray-light:  #332F27;
+  --border:      #3D392F;
+  --gray:        var(--gray);
+  --text:        #D9D4C7;
+  --text-muted:  #948C7C;
+
+  --sage:        #8B9C81;
+  --sage-light:  #2C3A26;
+  --sage-dark:   #86AE79;
+  --terracotta:       #C98653;
+  --terracotta-light: #382C1F;
+
+  --chart-1: #C9D6BE;
+  --chart-2: #5C7350;
+  --chart-3: #4A5C3E;
+  --chart-4: #C98653;
+  --chart-5: #B5788A;
+  --chart-6: #3D392F;
+
+  --green:       #4CAF6B;
+  --green-light: #263426;
+  --green-dark:  #74AD79;
+  --yellow:      #C99A4A;
+  --yellow-light:#2E2717;
+  --yellow-text: #D9AC5E;
+  --red:         #C1666A;
+  --red-light:   #33221F;
+  --red-muted:   #9C7369;
+  --blue:        #5D87B0;
+  --blue-text:   #7FA3C4;
+
+  background: var(--bg);
+  color: var(--text);
+}
+/* Сайдбар одинаков в обеих темах — переопределений быть не должно, иначе
+   он теряет тёмно-зелёную заливку. */
+body.dark .modal-content,
+body.dark .modal-header { background: var(--white); }
+body.dark .detail-section { background: var(--gray-light); }
+body.dark .plant-photo-placeholder { background: linear-gradient(145deg, var(--sage-light), #1B3020); }
+body.dark input, body.dark textarea, body.dark select {
+  background: var(--gray-light); color: var(--text); border-color: var(--border);
+}
+body.dark input::placeholder { color: var(--gray); }
+body.dark input:focus, body.dark textarea:focus, body.dark select:focus {
+  border-color: var(--sage);
+  box-shadow: 0 0 0 3px rgba(127, 171, 134, 0.15);
+}
+body.dark .task-chip.water { background: #0D2137; color: #90CAF9; }
+body.dark .task-chip.fertilize { background: #1E0D26; color: #CE93D8; }
+body.dark .task-chip.repot { background: #2A1500; color: #FFCC80; }
+body.dark .task-chip.pest_control { background: #2D0D1A; color: #F48FB1; }
+body.dark .task-chip.vitamins { background: #1A1A3E; color: #B39DDB; }
+body.dark .detail-section-action.water { background: #0D2137; color: #90CAF9; }
+body.dark .detail-section-action.fertilize { background: #1E0D26; color: #CE93D8; }
+body.dark .detail-section-action.repot { background: #2A1500; color: #FFCC80; }
+body.dark .detail-section-action.pest_control { background: #2D0D1A; color: #F48FB1; }
+body.dark .detail-section-action.vitamins { background: #1A1A3E; color: #B39DDB; }
+body.dark .card-action-btn { background: var(--gray-light); color: var(--text-muted); }
+body.dark .card-action-btn:hover { background: var(--sage-light); color: var(--sage-dark); }
+body.dark .card-action-btn.done { background: var(--sage-light); color: var(--sage-dark); }
+body.dark .history-date { background: var(--gray-light); border-color: var(--border); }
+body.dark .sort-btn, body.dark .type-filter-btn, body.dark .bulk-action-btn, body.dark .type-chip {
+  background: var(--gray-light); color: var(--text-muted); border-color: var(--border);
+}
+body.dark .sort-btn.active, body.dark .type-filter-btn.active { background: var(--sage-light); color: var(--sage-dark); border-color: var(--sage-light); }
+body.dark .type-chip.selected { background: var(--sage-light); color: var(--sage-dark); border-color: var(--sage-light); }
+body.dark .date-badge.ok { background: var(--green-light); color: var(--green-dark); }
+body.dark .date-badge.soon { background: var(--yellow-light); color: #E8A838; }
+body.dark .date-badge.overdue { background: var(--red-light); color: var(--red); }
+body.dark .date-badge.none { background: var(--gray-light); color: var(--gray); }
+body.dark .btn-primary { background: #3D7045; }
+body.dark .btn-primary:hover { background: #4D8055; }
+body.dark .btn-secondary { background: var(--gray-light); color: var(--text); border-color: var(--border); }
+body.dark .btn-secondary:hover { background: var(--border); }
+body.dark .btn-danger { background: var(--red-light); color: var(--red); border-color: #5A2020; }
+body.dark .gallery-add-btn { color: var(--gray); border-color: var(--border); }
+body.dark .gallery-add-btn:hover { border-color: var(--sage); color: var(--sage-dark); background: var(--sage-light); }
+body.dark .gallery-cover { background: var(--gray-light); }
+body.dark .gallery-thumb img { border-color: var(--border); }
+body.dark .today-summary-card { background: var(--white); }
+body.dark .today-summary-card.ok { background: var(--sage-light); }
+body.dark .today-summary-card.ok .today-summary-label { color: var(--sage-dark); }
+body.dark .today-summary-card.ok .today-summary-count { color: var(--sage-dark); }
+body.dark .fav-plant-photo { border-color: var(--white); }
+body.dark .status-text.ok { color: var(--green-dark); }
 body.dark .status-text.today { color: #90CAF9; }
 body.dark .problems-section { background: #2A1800; border-color: #5D3000; }
-body.dark .problem-chip { background: #252522; border-color: #5D3000; }
+body.dark .problem-chip { background: var(--gray-light); border-color: #5D3000; }
 body.dark .problem-chip.active { background: #7F4000; border-color: #7F4000; }
-body.dark .care-profile-chip { background: #1A2C1E; border-color: #2A4030; color: #A5C9AA; }
-body.dark .plant-group-header { color: #A5C9AA; border-color: #1A2C1E; }
-body.dark .empty-state { color: #6E6A62; }
-body.dark .modal-close { background: #252522; color: #908C84; }
-body.dark .modal-close:hover { background: #343330; color: #E8E5DF; }
-body.dark .form-section h4 { color: #6E6A62; }
-body.dark .form-group label { color: #908C84; }
-body.dark .toast-card { background: #1C1C1A; }
-body.dark .toast-msg { color: #A5C9AA; }
-body.dark .plants-search-input { background: #252522; color: #E8E5DF; border-color: #343330; }
+body.dark .care-profile-chip { background: var(--sage-light); border-color: var(--sage-light); color: var(--sage-dark); }
+body.dark .plant-group-header { color: var(--sage-dark); border-color: var(--sage-light); }
+body.dark .empty-state { color: var(--gray); }
+body.dark .modal-close { background: var(--gray-light); color: var(--text-muted); }
+body.dark .modal-close:hover { background: var(--border); color: var(--text); }
+body.dark .form-section h4 { color: var(--gray); }
+body.dark .form-group label { color: var(--text-muted); }
+body.dark .toast-card { background: var(--white); }
+body.dark .toast-msg { color: var(--sage-dark); }
+body.dark .plants-search-input { background: var(--gray-light); color: var(--text); border-color: var(--border); }
 body.dark .problem-chip-card { background: #2A1800; color: #FFAB40; }
 body.dark .plant-flowering-badge { background: rgba(100, 20, 50, 0.85); color: #FFAAC4; }
 body.dark .card-heart-btn { background: rgba(42,40,35,0.88); }
 body.dark .card-heart-btn:hover { background: rgba(58,55,48,0.98); }
 body.dark .fav-heart { background: rgba(42,40,35,0.9); }
 body.dark .cutting-status.rooting { background: #0D2137; color: #90CAF9; }
-body.dark .cutting-status.rooted { background: #162A1A; color: #8CC697; }
-body.dark .cutting-status.planted { background: #1A2C1E; color: #A5C9AA; }
-body.dark .cutting-status.failed { background: #2D1415; color: #E05A5E; }
-body.dark .cal-cell { background: #1C1C1A; border-color: #343330; }
-body.dark .cal-cell.cal-today { background: #1A2C1E; border-color: var(--sage); }
-body.dark .cal-cell:hover:not(.cal-other) { background: #252522; }
+body.dark .cutting-status.rooted { background: var(--green-light); color: var(--green-dark); }
+body.dark .cutting-status.planted { background: var(--sage-light); color: var(--sage-dark); }
+body.dark .cutting-status.failed { background: var(--red-light); color: var(--red); }
+body.dark .cal-cell { background: var(--white); border-color: var(--border); }
+body.dark .cal-cell.cal-today { background: var(--sage-light); border-color: var(--sage); }
+body.dark .cal-cell:hover:not(.cal-other) { background: var(--gray-light); }
 body.dark .cal-chip.water { background: #0D2137; color: #90CAF9; }
 body.dark .cal-chip.fertilize { background: #1E0D26; color: #CE93D8; }
 body.dark .cal-chip.pest_control { background: #2A1500; color: #FFCC80; }
-body.dark .cal-detail { background: #1C1C1A; }
-body.dark .cal-nav-btn { background: #252522; border-color: #343330; color: #E8E5DF; }
-body.dark .stats-list-row, body.dark .stat-card, body.dark .cutting-card, body.dark .today-plant { background: #1C1C1A; }
-body.dark .stats-list-count { background: #1A2C1E; color: #A5C9AA; }
-body.dark .search-wrap .search-icon { color: #6E6A62; }
+body.dark .cal-detail { background: var(--white); }
+body.dark .cal-nav-btn { background: var(--gray-light); border-color: var(--border); color: var(--text); }
+body.dark .stats-list-row, body.dark .stat-card, body.dark .cutting-card, body.dark .today-plant { background: var(--white); }
+body.dark .stats-list-count { background: var(--sage-light); color: var(--sage-dark); }
+body.dark .search-wrap .search-icon { color: var(--gray); }
 
 /* ── Flowering log ────────────────────────────────────────────────────────── */
 .flowering-periods-list {
@@ -1842,7 +1945,7 @@ body.dark .search-wrap .search-icon { color: #6E6A62; }
   transition: border-color 0.12s, color 0.12s;
 }
 .history-del-btn:hover { border-color: var(--red); color: var(--red); }
-body.dark .flowering-period-row { background: #252522; }
+body.dark .flowering-period-row { background: var(--gray-light); }
 
 
 /* ── Misc utility ─────────────────────────────────────────────────────────── */
@@ -1857,10 +1960,10 @@ body.dark .flowering-period-row { background: #252522; }
 }
 .stats-section { margin-bottom: 24px; }
 
-body.dark .calendar-day { background: #1C1C1A; }
-body.dark .calendar-day-header { background: #252522; color: #6E6A62; }
-body.dark .calendar-day-header.is-today { background: #1A2C1E; color: #A5C9AA; }
-body.dark .calendar-day-header.is-tomorrow { background: #2A2000; color: #E8A838; }
+body.dark .calendar-day { background: var(--white); }
+body.dark .calendar-day-header { background: var(--gray-light); color: var(--gray); }
+body.dark .calendar-day-header.is-today { background: var(--sage-light); color: var(--sage-dark); }
+body.dark .calendar-day-header.is-tomorrow { background: var(--yellow-light); color: #E8A838; }
 
 /* ── Backup card ──────────────────────────────────────────────────────────── */
 .backup-card {
@@ -1873,7 +1976,7 @@ body.dark .calendar-day-header.is-tomorrow { background: #2A2000; color: #E8A838
 .backup-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .backup-actions .btn-primary { text-decoration: none; display: inline-flex; align-items: center; }
 .backup-status { font-size: 0.8rem; color: var(--text-muted); margin-top: 10px; }
-body.dark .backup-card { background: #1C1C1A; }
+body.dark .backup-card { background: var(--white); }
 
 /* ── Sowings (посевной дневник) ───────────────────────────────────────────── */
 .sowing-card .plant-photo,
@@ -1891,7 +1994,7 @@ body.dark .backup-card { background: #1C1C1A; }
   box-shadow: var(--shadow-sm);
   z-index: 2;
 }
-.sowing-status-pill.sown        { background: #EAF3EC; color: #3D5C42; }
+.sowing-status-pill.sown        { background: var(--sage-light); color: var(--sage-dark); }
 .sowing-status-pill.germinated  { background: #E3F2E6; color: #2E7D46; }
 .sowing-status-pill.pricked     { background: #EDE7F6; color: #5E35B1; }
 .sowing-status-pill.incoll      { background: #E1F5FE; color: #0277BD; }
@@ -2065,8 +2168,8 @@ body.dark .sowing-status-pill { background: rgba(40,40,38,0.92); color: var(--te
 }
 .sheet-theme svg { width: 18px; height: 18px; }
 .sheet-theme:active { background: var(--gray-light); }
-body.dark .sheet-panel { background: #1C1C1A; }
-body.dark .sheet-item { background: #252522; }
+body.dark .sheet-panel { background: var(--white); }
+body.dark .sheet-item { background: var(--gray-light); }
 
 /* ── Mobile ───────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
@@ -2148,6 +2251,9 @@ body.dark .sheet-item { background: #252522; }
   .view-header { flex-direction: column; align-items: stretch; gap: 12px; margin-bottom: 14px; }
   .view-title { font-size: 1.45rem; letter-spacing: -0.6px; }
   .view-subtitle { font-size: 0.8rem; }
+  /* Шапка тянется на поля main, а они на телефоне другие */
+  .hero-header { margin: -12px -14px 0; padding: 14px 14px 10px; }
+  .hero-plant { right: -14px; width: 220px; }
 
   /* Two-column card grid */
   .plants-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }

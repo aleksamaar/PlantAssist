@@ -5,6 +5,10 @@ sowings.json
 achievements.json
 photos/
 
+# Слепок интерфейса для правок дизайна — внутри реальные названия растений
+design/
+_snapshot.html
+
 # HTTPS-сертификаты (приватные ключи!)
 certs/
 

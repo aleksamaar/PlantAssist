@@ -65,29 +65,29 @@ def require_login():
 LOGIN_PAGE = """<!DOCTYPE html><html lang="ru"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PlantAssist — вход</title>
-<link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#3D5C42">
+<link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#38492F">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="/icons/icon-192.png">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
  *{box-sizing:border-box;margin:0;padding:0}
- body{font-family:Inter,system-ui,sans-serif;background:#F5F3EF;color:#25231F;
+ body{font-family:Manrope,system-ui,sans-serif;background:#F5F1EA;color:#2E2A24;
       min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
  .box{background:#fff;border-radius:20px;padding:34px 28px;width:100%;max-width:360px;
       box-shadow:0 10px 40px rgba(0,0,0,.08);text-align:center}
  .logo{width:66px;height:66px;border-radius:18px;margin:0 auto 16px;display:block}
  h1{font-size:1.3rem;font-weight:800;letter-spacing:-.4px;margin-bottom:6px}
- p{font-size:.85rem;color:#8C8780;margin-bottom:22px}
+ p{font-size:.85rem;color:#9C9284;margin-bottom:22px}
  input{width:100%;padding:13px 15px;font-size:16px;font-family:inherit;
-       border:1.5px solid #E4E0D8;border-radius:12px;outline:none;transition:border-color .15s}
- input:focus{border-color:#6B8F71}
+       border:1.5px solid #E8E0D3;border-radius:12px;outline:none;transition:border-color .15s}
+ input:focus{border-color:#93A588}
  button{width:100%;margin-top:12px;padding:13px;font-size:.95rem;font-weight:700;font-family:inherit;
-        background:#3D5C42;color:#fff;border:none;border-radius:12px;cursor:pointer;transition:background .15s}
- button:hover{background:#2F4733}
- .err{color:#C0392B;font-size:.82rem;margin-top:12px}
+        background:#38492F;color:#fff;border:none;border-radius:12px;cursor:pointer;transition:background .15s}
+ button:hover{background:#46593B}
+ .err{color:#C6353B;font-size:.82rem;margin-top:12px}
  @media(prefers-color-scheme:dark){
-   body{background:#141412;color:#E8E5DF}.box{background:#1C1C1A}
-   input{background:#252522;border-color:#343330;color:#E8E5DF}p{color:#908C84}}
+   body{background:#221F1A;color:#D9D4C7}.box{background:#2A2823}
+   input{background:#332F27;border-color:#3D392F;color:#D9D4C7}p{color:#948C7C}}
 </style></head><body>
 <form class="box" method="post">
   <img src="/icons/icon-192.png" class="logo" alt="">
@@ -678,26 +678,6 @@ def delete_cutting(cutting_id):
     return '', 204
 
 
-# ── Sowings (посевной дневник) ──────────────────────────────────────────────
-# sprouted_count / first_sprout_date are derived from the log — not directly settable
-SOWING_FIELDS = (
-    'name', 'sowing_date', 'seeds_count',
-    'expected_min_days', 'expected_max_days',
-    'substrate', 'pretreatment', 'notes', 'status',
-    'contents',
-)
-
-
-@app.route('/api/sowings', methods=['GET'])
-def get_sowings():
-    return jsonify(load_sowings())
-
-
-@app.route('/api/sowings', methods=['POST'])
-def create_sowing():
-    sowings = load_sowings()
-    data = request.json or {}
-    sowing_date = data.get('sowing_date', date.today().isoformat())
 # ── Achievements ────────────────────────────────────────────────────────────
 # Conditions live on the frontend (ACHIEVEMENTS in app.js); the server only
 # remembers which ones were earned and when, so the toast fires exactly once
@@ -723,6 +703,26 @@ def unlock_achievements():
     return jsonify({'unlocked': unlocked, 'initialized': True})
 
 
+# ── Sowings (посевной дневник) ──────────────────────────────────────────────
+# sprouted_count / first_sprout_date are derived from the log — not directly settable
+SOWING_FIELDS = (
+    'name', 'sowing_date', 'seeds_count',
+    'expected_min_days', 'expected_max_days',
+    'substrate', 'pretreatment', 'notes', 'status',
+    'contents',
+)
+
+
+@app.route('/api/sowings', methods=['GET'])
+def get_sowings():
+    return jsonify(load_sowings())
+
+
+@app.route('/api/sowings', methods=['POST'])
+def create_sowing():
+    sowings = load_sowings()
+    data = request.json or {}
+    sowing_date = data.get('sowing_date', date.today().isoformat())
     seeds = data.get('seeds_count', None)
     sowing = {
         'id': str(uuid.uuid4()),
