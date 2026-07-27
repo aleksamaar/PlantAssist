@@ -220,6 +220,8 @@ def load_plants():
             plant['needs_repotting'] = False
         if 'fertilizing_reminder_date' not in plant:
             plant['fertilizing_reminder_date'] = ''
+        if 'price' not in plant:
+            plant['price'] = None   # цена покупки, ₽; None — не указана
         if 'vitamins' not in plant:
             plant['vitamins'] = {'frequency_days': None, 'last_date': '', 'history': []}
         if 'problems' not in plant:
@@ -279,6 +281,21 @@ def get_plants():
     return jsonify([p for p in load_plants() if not p.get('archived')])
 
 
+def _clean_price(value):
+    """Цена в рублях. Пустое поле, мусор и отрицательные значения → None.
+
+    Ноль — валидная цена (подарок), поэтому проверка на пустоту явная:
+    `value in (None, '', False)` съело бы 0, ведь 0 == False.
+    """
+    if value is None or value is False or (isinstance(value, str) and not value.strip()):
+        return None
+    try:
+        price = round(float(str(value).replace(',', '.').replace(' ', '')), 2)
+    except (TypeError, ValueError):
+        return None
+    return price if price >= 0 else None
+
+
 @app.route('/api/plants', methods=['POST'])
 def create_plant():
     plants = load_plants()
@@ -297,6 +314,7 @@ def create_plant():
         'description': data.get('description', ''),
         'photos': [],
         'purchased_date': data.get('purchased_date', ''),
+        'price': _clean_price(data.get('price')),
         'plant_types': data.get('plant_types', []),
         'problems': [],
         'watering_note': data.get('watering_note', ''),
@@ -348,6 +366,8 @@ def update_plant(plant_id):
     for field in ('name', 'description', 'purchased_date', 'watering_note', 'light', 'soil', 'room', 'favorited', 'is_flowering', 'needs_repotting', 'fertilizing_reminder_date', 'mute_watering', 'mute_fertilizing'):
         if field in data:
             plant[field] = data[field]
+    if 'price' in data:
+        plant['price'] = _clean_price(data['price'])
     if 'plant_types' in data:
         plant['plant_types'] = data['plant_types']
     if 'problems' in data:

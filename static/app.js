@@ -208,6 +208,16 @@ function formatDate(dateStr) {
   return `${day}.${m}.${y}`;
 }
 
+// Цены целые в подавляющем большинстве случаев — копейки показываем, только если они есть.
+function formatPrice(value) {
+  if (value == null) return '—';
+  const round = Math.round(value) === value;
+  return value.toLocaleString('ru-RU', {
+    minimumFractionDigits: round ? 0 : 2,
+    maximumFractionDigits: 2,
+  }) + ' ₽';
+}
+
 function nextDate(section) {
   const last = section.last_date;
   const freq = section.frequency_days;
@@ -323,6 +333,7 @@ function savePlantFormDraft() {
     name: document.getElementById('form-name')?.value || '',
     description: document.getElementById('form-description')?.value || '',
     purchased: document.getElementById('form-purchased')?.value || '',
+    price: document.getElementById('form-price')?.value || '',
     waterLast: document.getElementById('form-water-last')?.value || '',
     waterFreq: document.getElementById('form-water-freq')?.value || '',
     fertLast: document.getElementById('form-fert-last')?.value || '',
@@ -1464,10 +1475,13 @@ function openDetail(plantId) {
     desc.textContent = plant.description;
     info.appendChild(desc);
   }
-  if (plant.purchased_date) {
+  if (plant.purchased_date || plant.price != null) {
     const p = document.createElement('div');
     p.className = 'detail-purchased';
-    p.textContent = `Куплено: ${formatDate(plant.purchased_date)}`;
+    p.textContent = [
+      plant.purchased_date ? `Куплено: ${formatDate(plant.purchased_date)}` : '',
+      plant.price != null ? `за ${formatPrice(plant.price)}` : '',
+    ].filter(Boolean).join(' ');
     info.appendChild(p);
   }
   body.appendChild(info);
@@ -1888,6 +1902,7 @@ function openAddModal() {
     document.getElementById('form-favorited').checked = !!draft.favorited;
     document.getElementById('form-is-flowering').checked = !!draft.isFlowering;
     initTypeChips(draft.plantTypes || []);
+    document.getElementById('form-price').value = draft.price || '';
     initProblemsChips(draft.problems || []);
     mountCustomSelect('form-soil-wrap', 'form-soil', 'soil', SOIL_OPTIONS, draft.soil || '');
     mountCustomSelect('form-room-wrap', 'form-room', 'room', ROOM_OPTIONS, draft.room || '');
@@ -1945,6 +1960,7 @@ function openEditModal(plantId) {
   document.getElementById('form-light').value = plant.light || '';
   mountCustomSelect('form-soil-wrap', 'form-soil', 'soil', SOIL_OPTIONS, plant.soil || '');
   mountCustomSelect('form-room-wrap', 'form-room', 'room', ROOM_OPTIONS, plant.room || '');
+  document.getElementById('form-price').value = plant.price ?? '';
   document.getElementById('form-needs-repotting').checked = !!plant.needs_repotting;
   document.getElementById('form-favorited').checked = !!plant.favorited;
   document.getElementById('form-is-flowering').checked = !!plant.is_flowering;
@@ -1979,6 +1995,7 @@ document.getElementById('plant-form').addEventListener('submit', async (e) => {
       last_date: document.getElementById('form-water-last').value,
       frequency_days: parseInt(document.getElementById('form-water-freq').value) || null,
     },
+    price: document.getElementById('form-price').value,   // сервер чистит и валидирует
     fertilizing: {
       last_date: document.getElementById('form-fert-last').value,
       frequency_days: parseInt(document.getElementById('form-fert-freq').value) || 30,
@@ -3967,6 +3984,58 @@ function _careScoreStatus(score) {
 // ── Period switcher — one row above everything it scopes ─────────────────────
 function _buildStatsFilters() {
   const row = document.createElement('div');
+function renderStats() {
+  const container = document.getElementById('stats-container');
+  if (!container) return;
+  _destroyStatCharts();
+  container.innerHTML = '';
+
+  const ct = _chartTheme();
+  const MONTHS = statsMonths;
+
+  container.appendChild(_buildStatsFilters());
+
+  // ── KPI row ──────────────────────────────────────────────────────────────
+  const to = today();
+  const from = addDays(to, -MONTHS * 30);
+  const score = careScore(from, to);
+  const prevScore = careScore(addDays(from, -MONTHS * 30), addDays(from, -1));
+
+  const overdueCount    = plants.filter(p => hasOverdueTasks(p)).length;
+  const favoritedCount  = plants.filter(p => p.favorited).length;
+  const floweringCount  = plants.filter(p => p.is_flowering).length;
+  const withProblems    = plants.filter(p => (p.problems || []).length > 0).length;
+  const needsRepotting  = plants.filter(p => p.needs_repotting).length;
+
+  const kpiRow = document.createElement('div');
+  kpiRow.className = 'stats-kpi-row';
+
+  if (score !== null) {
+    const st = _careScoreStatus(score);
+    const diff = prevScore === null ? null : score - prevScore;
+    const card = document.createElement('div');
+    card.className = 'stat-card stat-card-accent';
+    card.innerHTML = `
+      <div class="stat-card-icon">✨</div>
+      <div class="stat-card-value">${score}<span class="stat-card-unit">/100</span></div>
+      <div class="stat-card-label">Индекс ухоженности</div>
+      <div class="stat-card-note">
+        <span class="status-dot ${st.key}" aria-hidden="true"></span>${st.word}
+        ${diff ? `<span class="kpi-delta ${diff > 0 ? 'good' : 'bad'}">${diff > 0 ? '↑' : '↓'} ${Math.abs(diff)}</span>` : ''}
+      </div>`;
+    card.title = `Доля поливов, подкормок и обработок, сделанных вовремя за выбранный период (допуск ${Math.round((CARE_TOLERANCE - 1) * 100)}% к заявленной частоте)`;
+    kpiRow.appendChild(card);
+  }
+
+  // Цена есть не у всех растений — считаем по тем, где указана, и честно пишем,
+  // по скольким именно, иначе сумма выглядит как «всё, что потрачено».
+  const priced = plants.filter(p => typeof p.price === 'number');
+  const spentTotal = priced.reduce((sum, p) => sum + p.price, 0);
+  const spentInPeriod = priced
+    .filter(p => p.purchased_date && p.purchased_date >= from)
+    .reduce((sum, p) => sum + p.price, 0);
+
+  [
   row.className = 'stats-filters';
   const seg = document.createElement('div');
   seg.className = 'seg-control';
@@ -3979,6 +4048,19 @@ function _buildStatsFilters() {
     b.setAttribute('aria-pressed', statsMonths === months ? 'true' : 'false');
     b.addEventListener('click', () => { statsMonths = months; renderStats(); });
     seg.appendChild(b);
+
+  if (priced.length) {
+    const card = document.createElement('div');
+    card.className = 'stat-card stat-card-wide';   // сумма не влезает в узкую плитку
+    card.innerHTML = `
+      <div class="stat-card-icon">💰</div>
+      <div class="stat-card-value">${formatPrice(spentTotal)}</div>
+      <div class="stat-card-label">Потрачено на коллекцию</div>
+      <div class="stat-card-note">у ${priced.length} из ${plants.length} с ценой</div>`;
+    card.title = `Сумма по растениям, у которых указана цена (${priced.length} из ${plants.length}).\n`
+      + `За выбранный период: ${formatPrice(spentInPeriod)}`;
+    kpiRow.appendChild(card);
+  }
   });
   row.appendChild(seg);
   return row;
@@ -4075,8 +4157,88 @@ function _buildStatsFilters() {
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: { grid: { color: ct.grid }, ticks: { color: ct.tick, font: { size: 11 } } },
-          y: { grid: { color: ct.grid }, ticks: { color: ct.tick, font: { size: 11 }, stepSize: 1 }, beginAtZero: true },
+          x: _axis(ct, { rest: { grid: { display: false } } }),
+          y: _axis(ct, { ticks: { stepSize: 1 }, rest: { beginAtZero: true } }),
+        }
+      }
+    });
+
+    container.appendChild(twoCol);
+  }
+
+  // ── Money: spend per month + the priciest plants ─────────────────────────
+  // Только растения с указанной ценой; месяц берётся из даты покупки.
+  if (priced.length) {
+    const { keys, labels } = _monthLabels(MONTHS);
+    const spendByMonth = keys.map(m => priced
+      .filter(p => (p.purchased_date || '').startsWith(m))
+      .reduce((sum, p) => sum + p.price, 0));
+
+    const twoCol = document.createElement('div');
+    twoCol.className = 'dashboard-charts-2';
+
+    const cardSpend = document.createElement('div');
+    cardSpend.className = 'dashboard-chart-card';
+    cardSpend.style.marginBottom = '0';
+    cardSpend.innerHTML = `<div class="chart-card-title">Траты на растения по месяцам</div><div style="position:relative;height:200px"><canvas id="chart-spend"></canvas></div>`;
+    twoCol.appendChild(cardSpend);
+
+    _statCharts.spend = new Chart(cardSpend.querySelector('#chart-spend').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          data: spendByMonth,
+          backgroundColor: ct.sage,
+          borderRadius: 4,
+          borderSkipped: false,
+          maxBarThickness: 34,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: c => ' ' + formatPrice(c.parsed.y) } },
+        },
+        scales: {
+          x: _axis(ct, { rest: { grid: { display: false } } }),
+          y: _axis(ct, { ticks: { callback: v => v.toLocaleString('ru-RU') }, rest: { beginAtZero: true } }),
+        }
+      }
+    });
+
+    const top = [...priced].sort((a, b) => b.price - a.price).slice(0, 8);
+    const cardTop = document.createElement('div');
+    cardTop.className = 'dashboard-chart-card';
+    cardTop.style.marginBottom = '0';
+    cardTop.innerHTML = `<div class="chart-card-title">Самые дорогие растения</div><div style="position:relative;height:200px"><canvas id="chart-top-price"></canvas></div>`;
+    twoCol.appendChild(cardTop);
+
+    _statCharts.topPrice = new Chart(cardTop.querySelector('#chart-top-price').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: top.map(p => p.name),
+        datasets: [{
+          data: top.map(p => p.price),
+          backgroundColor: ct.sage,
+          borderRadius: 4,
+          borderSkipped: false,
+          maxBarThickness: 18,
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: c => ' ' + formatPrice(c.parsed.x) } },
+        },
+        scales: {
+          x: _axis(ct, { ticks: { callback: v => v.toLocaleString('ru-RU') }, rest: { beginAtZero: true } }),
+          y: _axis(ct, { rest: { grid: { display: false } } }),
         }
       }
     });
