@@ -80,6 +80,7 @@ PlantAssist/
 - **Фронтенд:** vanilla JS (ES6+), без фреймворков и без npm.
 - **CDN:** Inter (шрифт), Lucide (иконки), Chart.js 4 (графики).
 - **Хранилище:** JSON-файлы + фото на диске.
+├── achievements.json      # полученные достижения: id → дата (в .gitignore)
 
 ## Модель данных
 
@@ -230,6 +231,8 @@ let currentView = 'today';
 | `render()` | Перерисовывает «Сегодня» и «Все растения» |
 | `renderToday()` | Просроченные задачи + напоминания о всходах |
 | `renderCalendar()` | Таблица: растения × даты, иконки задач в ячейках |
+| GET | `/api/achievements` | `{unlocked: {id: дата}, initialized}` |
+| POST | `/api/achievements` | Отметить полученными `{ids: [...]}` (дату не перезаписывает) |
 | `renderStats()` | KPI + 4 графика Chart.js + история цветения + бэкап |
 | `renderAchievements()` | 71 достижение по категориям |
 | `renderSowings()` / `openSowingDetail()` | Посевы и журнал |
@@ -267,6 +270,20 @@ let currentView = 'today';
 ## Нюансы
 
 - **`static_url_path=''`** — статика раздаётся с корня, поэтому API под `/api/`
+### Навигация
+
+Роутера нет, URL не меняется. 8 экранов переключает один обработчик на
+`.sidebar-nav-btn`: снимает класс `active` со всех `.view`, вешает его на
+`#view-<currentView>` и зовёт нужный `load*()`/`render*()`. Значения `data-view`
+объявлены в `index.html`:
+
+`today` · `all` · `calendar` · `cuttings` · `sowings` · `archive` ·
+`achievements` · `stats`
+
+Мобильная шторка «Ещё» логику не дублирует: она кликает по соответствующей
+кнопке сайдбара (`.sidebar-nav-btn[data-view="…"]`). Новый экран = разметка
+`.view` в `index.html` + кнопка сайдбара + ветка в обработчике.
+
 - **Lucide:** `createIcons()` заменяет `<i>` на `<svg>`, поэтому при динамическом
   обновлении иконки нужно пересоздавать элемент через `innerHTML`, а не искать `<i>`
 - **`--text-secondary`** — алиас `--text-muted` (в JS есть inline-стили с ним)
@@ -281,3 +298,5 @@ let currentView = 'today';
 Python >= 3.8 (на хостинге 3.13)
 flask >= 3.0
 ```
+| `syncAchievements()` / `checkAchievements()` | Загрузка прогресса при старте / поиск новых достижений |
+| `queueAchievementToast(a)` | Плашка «достижение получено», по одной из очереди |

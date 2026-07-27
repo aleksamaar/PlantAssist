@@ -17,6 +17,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(BASE_DIR, 'data.json')
 CUTTINGS_FILE = os.path.join(BASE_DIR, 'cuttings.json')
 SOWINGS_FILE = os.path.join(BASE_DIR, 'sowings.json')
+ACHIEVEMENTS_FILE = os.path.join(BASE_DIR, 'achievements.json')
 PHOTOS_DIR = os.path.join(BASE_DIR, 'photos')
 
 os.makedirs(PHOTOS_DIR, exist_ok=True)
@@ -137,6 +138,26 @@ def load_cuttings():
 
 def save_cuttings(cuttings):
     _atomic_write_json(CUTTINGS_FILE, cuttings)
+
+
+def load_achievements():
+    """{'unlocked': {achievement_id: 'YYYY-MM-DD'}} — when each one was earned.
+
+    A missing file means the frontend has never synced: it then backfills
+    everything already earned silently, without showing toasts for years of
+    history at once.
+    """
+    if not os.path.exists(ACHIEVEMENTS_FILE):
+        return {'unlocked': {}, 'initialized': False}
+    with open(ACHIEVEMENTS_FILE, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    data.setdefault('unlocked', {})
+    data['initialized'] = True
+    return data
+
+
+def save_achievements(data):
+    _atomic_write_json(ACHIEVEMENTS_FILE, {'unlocked': data.get('unlocked', {})})
 
 
 def load_sowings():
@@ -657,6 +678,31 @@ def create_sowing():
     sowings = load_sowings()
     data = request.json or {}
     sowing_date = data.get('sowing_date', date.today().isoformat())
+# ── Achievements ────────────────────────────────────────────────────────────
+# Conditions live on the frontend (ACHIEVEMENTS in app.js); the server only
+# remembers which ones were earned and when, so the toast fires exactly once
+# and the progress is shared between the phone and the desktop.
+@app.route('/api/achievements', methods=['GET'])
+def get_achievements():
+    return jsonify(load_achievements())
+
+
+@app.route('/api/achievements', methods=['POST'])
+def unlock_achievements():
+    payload = request.get_json(silent=True) or {}
+    ids = payload.get('ids') or []
+    if not isinstance(ids, list):
+        return jsonify({'error': 'ids must be a list'}), 400
+    data = load_achievements()
+    unlocked = data['unlocked']
+    today = date.today().isoformat()
+    for achievement_id in ids:
+        if isinstance(achievement_id, str) and achievement_id:
+            unlocked.setdefault(achievement_id, today)  # keep the original date
+    save_achievements(data)
+    return jsonify({'unlocked': unlocked, 'initialized': True})
+
+
     seeds = data.get('seeds_count', None)
     sowing = {
         'id': str(uuid.uuid4()),
@@ -803,7 +849,7 @@ def delete_sowing_photo(sowing_id, photo_id):
 
 
 # ── Backup / restore ────────────────────────────────────────────────────────
-DATA_FILES = (DATA_FILE, CUTTINGS_FILE, SOWINGS_FILE)
+DATA_FILES = (DATA_FILE, CUTTINGS_FILE, SOWINGS_FILE, ACHIEVEMENTS_FILE)
 
 
 @app.route('/api/backup', methods=['GET'])

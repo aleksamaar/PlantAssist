@@ -402,6 +402,8 @@ async function loadPlants() {
 
 async function loadCuttings() {
   cuttings = await api('GET', '/api/cuttings');
+  // Anything that changed data may have unlocked an achievement
+  if (method !== 'GET' && !path.startsWith('/api/achievements')) scheduleAchievementCheck();
   renderCuttings();
 }
 
@@ -3688,6 +3690,123 @@ async function renderAchievements() {
 
   // Category groups — show unlocked first within each group
   const cats = [...new Set(ACHIEVEMENTS.map(a => a.cat))];
+// ── Achievement unlocks ───────────────────────────────────────────────────────
+// Conditions are evaluated here; the server only remembers which ones were earned
+// and when, so a toast fires once and the progress is shared across devices.
+let unlockedAchievements = {};   // id -> date earned
+let _achievementsReady = false;  // server state loaded at least once
+let _achievementTimer = null;
+let _achievementCheckRunning = false;
+let _achievementCheckAgain = false;
+
+function _earnedNow() {
+  return ACHIEVEMENTS.filter(a => { try { return a.check(); } catch(e) { return false; } });
+}
+
+function _fmtEarned(iso) {
+  const [y, m, d] = String(iso).split('-').map(Number);
+  if (!y || !m || !d) return '';
+  const date = new Date(y, m - 1, d);  // local time, like every other date here
+  const sameYear = y === new Date().getFullYear();
+  return 'получено ' + date.toLocaleDateString('ru-RU',
+    sameYear ? { day: 'numeric', month: 'long' } : { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+async function syncAchievements() {
+  let state;
+  try { state = await api('GET', '/api/achievements'); } catch(e) { return; }
+  unlockedAchievements = state.unlocked || {};
+  _achievementsReady = true;
+
+  if (!state.initialized) {
+    // First ever sync: adopt everything already earned silently — otherwise years
+    // of history would arrive as a parade of toasts.
+    try {
+      const saved = await api('POST', '/api/achievements', { ids: _earnedNow().map(a => a.id) });
+      unlockedAchievements = saved.unlocked || {};
+    } catch(e) {}
+    return;
+  }
+  // Some achievements unlock with time, not with an action (longevity_*)
+  await checkAchievements();
+}
+
+async function checkAchievements() {
+  if (!_achievementsReady) return;
+  // Two overlapping checks would both see the same "fresh" list while the POST is
+  // in flight and show the same achievement twice — let one run at a time.
+  if (_achievementCheckRunning) { _achievementCheckAgain = true; return; }
+  _achievementCheckRunning = true;
+  try {
+    const fresh = _earnedNow().filter(a => !(a.id in unlockedAchievements));
+    if (!fresh.length) return;
+    try {
+      const saved = await api('POST', '/api/achievements', { ids: fresh.map(a => a.id) });
+      unlockedAchievements = saved.unlocked || {};
+    } catch(e) {
+      return;  // not persisted — stay quiet, it would pop up on every action forever
+    }
+    fresh.forEach(queueAchievementToast);
+    if (currentView === 'achievements') renderAchievements();
+  } finally {
+    _achievementCheckRunning = false;
+    if (_achievementCheckAgain) { _achievementCheckAgain = false; checkAchievements(); }
+  }
+}
+
+// Bulk actions fire a burst of requests — collapse them into one check.
+function scheduleAchievementCheck() {
+  clearTimeout(_achievementTimer);
+  _achievementTimer = setTimeout(checkAchievements, 300);
+}
+
+const _achievementQueue = [];
+let _achievementShowing = false;
+
+function queueAchievementToast(achievement) {
+  _achievementQueue.push(achievement);
+  _drainAchievementQueue();
+}
+
+function _drainAchievementQueue() {
+  if (_achievementShowing || !_achievementQueue.length) return;
+  _achievementShowing = true;
+  const a = _achievementQueue.shift();
+
+  const card = document.createElement('div');
+  card.className = 'achievement-toast';
+  card.innerHTML = `
+    <div class="achievement-toast-icon">${a.icon}</div>
+    <div>
+      <div class="achievement-toast-kicker">Достижение получено</div>
+      <div class="achievement-toast-name">${a.name}</div>
+      <div class="achievement-toast-desc">${a.desc}</div>
+    </div>`;
+  document.body.appendChild(card);
+  requestAnimationFrame(() => card.classList.add('in'));
+
+  let closed = false;
+  let hideTimer = null;
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    clearTimeout(hideTimer);
+    card.classList.remove('in');
+    card.classList.add('out');
+    setTimeout(() => {
+      card.remove();
+      _achievementShowing = false;
+      _drainAchievementQueue();  // next one in line
+    }, 400);
+  };
+  hideTimer = setTimeout(close, 4000);
+
+  card.addEventListener('click', () => {
+    document.querySelector('.sidebar-nav-btn[data-view="achievements"]')?.click();
+    close();
+  });
+}
+
 
   cats.forEach(cat => {
     const inCat = ACHIEVEMENTS.filter(a => a.cat === cat);
@@ -3730,11 +3849,13 @@ function renderStats() {
   const container = document.getElementById('stats-container');
   if (!container) return;
   _destroyStatCharts();
+      const earnedOn = isUnlocked ? unlockedAchievements[a.id] : null;
   container.innerHTML = '';
 
   const ct = _chartTheme();
 
   // ── KPI row ──────────────────────────────────────────────────────────────
+        ${earnedOn ? `<div class="achievement-date">${_fmtEarned(earnedOn)}</div>` : ''}
   const overdueCount    = plants.filter(p => hasOverdueTasks(p)).length;
   const favoritedCount  = plants.filter(p => p.favorited).length;
   const floweringCount  = plants.filter(p => p.is_flowering).length;
@@ -4107,5 +4228,14 @@ function buildBackupSection() {
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-loadPlants();
 loadSowings(); // preload so sprout reminders appear on "Сегодня"
+      try { cuttings = await api('GET', '/api/cuttings'); } catch(e) {}
+      await syncAchievements();  // the ZIP carries its own achievement progress
+
+(async () => {
+  await loadPlants();
+  // Cuttings drive 11 achievements. Without loading them up front, opening the
+  // cuttings screen later would look like a burst of fresh unlocks.
+  try { cuttings = await api('GET', '/api/cuttings'); } catch(e) {}
+  syncAchievements();
+})();

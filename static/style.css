@@ -1336,7 +1336,14 @@ body.dark .cal-table tbody tr:nth-child(even) .cal-td-plant { background: #20202
   margin-bottom: 14px;
 }
 .achievements-header h3 { font-size: 1rem; font-weight: 700; margin: 0; }
-.achievements-counter { font-size: 0.78rem; color: var(--text-muted); font-weight: 500; }
+.achievements-counter {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--sage-dark);
+  background: var(--sage-light);
+  padding: 3px 10px;
+  border-radius: 10px;
+}
 
 .achievements-grid {
   display: grid;
@@ -1532,6 +1539,68 @@ body.dark {
 body.dark .sidebar { background: #1C1C1A; border-color: #343330; }
 body.dark .sidebar-logo { color: #A5C9AA; border-color: #343330; }
 body.dark .sidebar-nav-btn.active { background: #1A2C1E; color: #A5C9AA; }
+.achievement-date {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  margin-top: 5px;
+}
+
+/* Unlock toast — drops in from the top so the mobile bottom nav stays clear */
+.achievement-toast {
+  position: fixed;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: min(380px, calc(100vw - 24px));
+  padding: 13px 16px;
+  border-radius: var(--radius);
+  background: var(--white);
+  border: 1.5px solid var(--sage);
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+  opacity: 0;
+  transform: translate(-50%, -26px);
+  transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.achievement-toast.in  { opacity: 1; transform: translate(-50%, 0); }
+.achievement-toast.out { opacity: 0; transform: translate(-50%, -18px); }
+.achievement-toast-icon {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: var(--sage-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+.achievement-toast-kicker {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--sage-dark);
+}
+.achievement-toast-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-top: 3px;
+}
+.achievement-toast-desc {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+  margin-top: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .achievement-toast { transition: opacity 0.2s ease; }
+  .achievement-toast.in, .achievement-toast.out { transform: translate(-50%, 0); }
+}
 body.dark .sidebar-nav-btn:hover:not(.active) { background: #252522; color: #E8E5DF; }
 body.dark .sidebar-bottom { border-color: #343330; }
 body.dark .theme-toggle-btn:hover { background: #252522; }
