@@ -1642,6 +1642,79 @@ body.dark .date-badge.none { background: #252522; color: #6E6A62; }
 body.dark .btn-primary { background: #3D7045; }
 body.dark .btn-primary:hover { background: #4D8055; }
 body.dark .btn-secondary { background: #252522; color: #E8E5DF; border-color: #343330; }
+/* ── Period switcher — one row, scopes every chart below it ───────────────── */
+.stats-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.seg-control {
+  display: inline-flex;
+  background: var(--gray-light);
+  border-radius: 20px;
+  padding: 3px;
+  gap: 2px;
+}
+.seg-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 18px;
+  padding: 7px 16px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 34px;
+  transition: background 0.15s, color 0.15s;
+}
+.seg-btn.active { background: var(--white); color: var(--text); box-shadow: var(--shadow-sm); }
+
+/* ── Care index tile — the headline, so it gets twice the width ───────────── */
+/* Мягкая светлая заливка с тонкой внутренней рамкой, а не сплошная тёмная:
+   тёмная плитка на тёплом фоне даёт слишком высокий контраст. */
+.stat-card-accent {
+  grid-column: span 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--sage-light);
+  box-shadow: var(--shadow-sm), inset 0 0 0 1px rgba(56,73,47,0.12);
+  padding: 16px 18px;
+}
+.stat-card-accent .stat-card-icon { font-size: 1.3rem; margin-bottom: 2px; }
+.stat-card-accent .stat-card-value { font-size: 2.4rem; color: var(--sage-dark); }
+.stat-card-accent .stat-card-unit { color: var(--sage-dark); opacity: 0.7; }
+.stat-card-accent .stat-card-label { font-size: 0.78rem; font-weight: 700; color: var(--sage-dark); }
+.stat-card-unit { font-size: 1rem; font-weight: 600; color: var(--text-muted); letter-spacing: 0; margin-left: 2px; }
+.stat-card-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 0.68rem;
+  line-height: 1.25;
+  color: var(--text-muted);
+  margin-top: 5px;
+}
+/* Плитка с суммой шире обычной: «43 290 ₽» в узкую не помещается */
+.stat-card-wide { grid-column: span 2; }
+.stat-card-wide .stat-card-value { white-space: nowrap; }
+@media (max-width: 560px) {
+  .stat-card-wide, .stat-card-accent { grid-column: span 2; }
+}
+/* Status never rides on color alone — the dot always sits next to a word */
+.status-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.status-dot.good     { background: #0ca30c; }
+.status-dot.warning  { background: #fab219; }
+.status-dot.critical { background: #d03b3b; }
+.kpi-delta { font-size: 0.7rem; font-weight: 700; }
+.kpi-delta.good { color: #006300; }
+.kpi-delta.bad  { color: #b3302f; }
+body.dark .kpi-delta.good { color: #0ca30c; }
+body.dark .kpi-delta.bad  { color: #e66767; }
+
 body.dark .btn-secondary:hover { background: #343330; }
 body.dark .btn-danger { background: #2D1415; color: #E05A5E; border-color: #5A2020; }
 body.dark .gallery-add-btn { color: #6E6A62; border-color: #343330; }

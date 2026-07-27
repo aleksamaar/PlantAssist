@@ -3865,6 +3865,125 @@ function renderStats() {
   const kpiRow = document.createElement('div');
   kpiRow.className = 'stats-kpi-row';
   [
+// Colours come from the design tokens in style.css so the charts follow the theme
+// instead of keeping their own copy of the palette.
+function _cssVar(name, fallback) {
+  const v = getComputedStyle(document.body).getPropertyValue(name).trim();
+  return v || fallback;
+}
+
+function _chartTheme() {
+  const dark = document.body.classList.contains('dark');
+  return {
+    // Single-series bars/lines use --chart-2: a mid-tone sage, deliberately
+    // neither too dark nor too pale.
+    sage:     _cssVar('--chart-2', '#5C7350'),
+    sageDark: _cssVar('--chart-1', '#38492F'),
+    grid:     dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)',
+    tick:     _cssVar('--text-muted', '#9C9284'),
+    bg:       _cssVar('--white', '#FFFFFF'),
+    // Two series on one chart need two tellable-apart steps of the same hue.
+    duo: { a: _cssVar('--chart-1', '#38492F'), b: _cssVar('--chart-2', '#5C7350') },
+    // Donut segments cycle chart-1..6 — the documented categorical sequence.
+    ramp: [
+      _cssVar('--chart-1', '#38492F'), _cssVar('--chart-2', '#5C7350'),
+      _cssVar('--chart-3', '#C9D3BE'), _cssVar('--chart-4', '#B5551F'),
+      _cssVar('--chart-5', '#D9A6B5'), _cssVar('--chart-6', '#E8E0D3'),
+    ],
+  };
+}
+
+// Shared chart chrome: hairline grid, no tick marks, no axis border.
+function _axis(ct, extra = {}) {
+  return {
+    grid: { color: ct.grid, drawTicks: false },
+    border: { display: false },
+    ticks: { color: ct.tick, font: { size: 11 }, padding: 6, ...(extra.ticks || {}) },
+    ...(extra.rest || {}),
+  };
+}
+
+// ── Care index ────────────────────────────────────────────────────────────────
+// One number for the whole collection: the share of care done on time. Computed
+// here rather than per plant — per-plant breakdowns turned out unreadable.
+
+const CARE_TOLERANCE = 1.2;   // 20% grace before an action counts as late
+const SCORED_SECTIONS = ['watering', 'fertilizing', 'pest_control'];
+
+let statsMonths = 12;         // period shown on the dashboard, in months
+
+function _daysBetween(a, b) {
+  const [y1, m1, d1] = a.split('-').map(Number);
+  const [y2, m2, d2] = b.split('-').map(Number);
+  return Math.round((new Date(y2, m2 - 1, d2) - new Date(y1, m1 - 1, d1)) / 86400000);
+}
+
+// History entries are newest-first and may be strings or objects — normalise once.
+function _historyDates(plant, section) {
+  return (plant[section]?.history || [])
+    .map(h => (typeof h === 'string' ? h : (h?.date || '')))
+    .filter(Boolean)
+    .sort();  // oldest → newest
+}
+
+function _sectionTracked(plant, section) {
+  if (!plant[section]?.frequency_days) return false;
+  if (section === 'watering') return !isWateringMuted(plant);
+  if (section === 'fertilizing') return !isFertilizingMuted(plant);
+  return true;
+}
+
+// Completed intervals in the window, plus the still-open one (last action → today).
+// The open interval is what makes a forgotten plant show up at all: without it,
+// a plant nobody touched would simply contribute nothing to the score.
+function _careEvents(plant, section, from, to) {
+  if (!_sectionTracked(plant, section)) return [];
+  const limit = plant[section].frequency_days * CARE_TOLERANCE;
+  const dates = _historyDates(plant, section);
+  const events = [];
+  for (let i = 1; i < dates.length; i++) {
+    if (dates[i] < from || dates[i] > to) continue;
+    events.push(_daysBetween(dates[i - 1], dates[i]) <= limit);
+  }
+  const last = dates[dates.length - 1] || plant[section].last_date;
+  if (last && to === today()) events.push(_daysBetween(last, to) <= limit);
+  return events;
+}
+
+function careScore(from, to) {
+  let total = 0, onTime = 0;
+  plants.forEach(p => SCORED_SECTIONS.forEach(section => {
+    _careEvents(p, section, from, to).forEach(ok => { total++; if (ok) onTime++; });
+  }));
+  return total ? Math.round((onTime / total) * 100) : null;
+}
+
+function _careScoreStatus(score) {
+  if (score >= 85) return { key: 'good', icon: '✓', word: 'вовремя' };
+  if (score >= 60) return { key: 'warning', icon: '!', word: 'есть пропуски' };
+  return { key: 'critical', icon: '✕', word: 'много опозданий' };
+}
+
+// ── Period switcher — one row above everything it scopes ─────────────────────
+function _buildStatsFilters() {
+  const row = document.createElement('div');
+  row.className = 'stats-filters';
+  const seg = document.createElement('div');
+  seg.className = 'seg-control';
+  seg.setAttribute('role', 'group');
+  seg.setAttribute('aria-label', 'Период');
+  [[3, '3 месяца'], [6, 'Полгода'], [12, 'Год']].forEach(([months, label]) => {
+    const b = document.createElement('button');
+    b.className = 'seg-btn' + (statsMonths === months ? ' active' : '');
+    b.textContent = label;
+    b.setAttribute('aria-pressed', statsMonths === months ? 'true' : 'false');
+    b.addEventListener('click', () => { statsMonths = months; renderStats(); });
+    seg.appendChild(b);
+  });
+  row.appendChild(seg);
+  return row;
+}
+
     { icon: '🌿', value: plants.length,   label: 'Растений' },
     { icon: '❤️', value: favoritedCount,  label: 'Избранных' },
     { icon: '🌸', value: floweringCount,  label: 'Цветут' },
@@ -3872,6 +3991,9 @@ function renderStats() {
     { icon: '🐛', value: withProblems,    label: 'С вредителями' },
     { icon: '🪴', value: needsRepotting,  label: 'Нужна пересадка' },
   ].forEach(({ icon, value, label }) => {
+  const MONTHS = statsMonths;
+
+  container.appendChild(_buildStatsFilters());
     const card = document.createElement('div');
     card.className = 'stat-card';
     card.innerHTML = `<div class="stat-card-icon">${icon}</div><div class="stat-card-value">${value}</div><div class="stat-card-label">${label}</div>`;
@@ -3881,7 +4003,7 @@ function renderStats() {
 
   // ── New plants by month (bar) + cumulative line — two columns ────────────
   {
-    const { keys, labels } = _monthLabels(12);
+    const { keys, labels } = _monthLabels(MONTHS);
     const newCounts = keys.map(m => plants.filter(p => (p.purchased_date || '').startsWith(m)).length);
 
     // Cumulative: how many plants acquired by end of each month
@@ -4041,7 +4163,7 @@ function renderStats() {
 
   // ── Care activity by month (line) ─────────────────────────────────────────
   {
-    const { keys, labels } = _monthLabels(12);
+    const { keys, labels } = _monthLabels(MONTHS);
     const waterCounts = keys.map(() => 0);
     const fertCounts  = keys.map(() => 0);
 
