@@ -469,6 +469,16 @@ function renderTodaySummary() {
   if (list) list.parentNode.insertBefore(row, list);
 }
 
+// One SVG path for both states — filled or outlined, never a font glyph: ❤️/🤍
+// render at different sizes and colours on every OS.
+function heartSvg(filled) {
+  return `<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"
+    fill="${filled ? 'currentColor' : 'none'}" stroke="currentColor"
+    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+  </svg>`;
+}
+
 function renderFavoritesRow() {
   const old = document.getElementById('favorites-section');
   if (old) old.remove();
@@ -511,11 +521,16 @@ function renderFavoritesRow() {
       photoWrap.appendChild(ph);
     }
 
+    const badge = document.createElement('span');
+    badge.className = 'fav-heart';
+    badge.innerHTML = heartSvg(true);
+
     const nameEl = document.createElement('div');
     nameEl.className = 'fav-plant-name';
     nameEl.textContent = p.name;
 
     item.appendChild(photoWrap);
+    item.appendChild(badge);
     item.appendChild(nameEl);
     scroll.appendChild(item);
   });
@@ -822,9 +837,9 @@ function buildCard(plant) {
 
   // Favorite heart button
   const heartBtn = document.createElement('button');
-  heartBtn.className = 'card-heart-btn';
+  heartBtn.className = 'card-heart-btn' + (plant.favorited ? ' fav' : '');
   heartBtn.title = plant.favorited ? 'Убрать из избранного' : 'В избранное';
-  heartBtn.textContent = plant.favorited ? '❤️' : '🤍';
+  heartBtn.innerHTML = heartSvg(plant.favorited);
   heartBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
     const updated = await api('PUT', `/api/plants/${plant.id}`, { favorited: !plant.favorited });

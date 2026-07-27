@@ -411,7 +411,8 @@ main {
   z-index: 2;
 }
 
-/* Favorite heart */
+/* Favorite heart — SVG, не эмодзи: один и тот же путь в обоих состояниях,
+   меняется только заливка. scaleY(1.18) — форма из макета. */
 .card-heart-btn {
   position: absolute;
   top: 10px; right: 10px;
@@ -505,7 +506,24 @@ main {
 .card-action-btn {
   flex: 1;
   padding: 8px 4px 7px;
+.card-heart-btn.fav { color: var(--red); }
   border: none;
+.card-heart-btn svg, .fav-heart svg { transform: scaleY(1.18); }
+
+/* Маленький значок на кружке любимого растения */
+.fav-heart {
+  position: absolute;
+  top: 2px; right: 2px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.9);
+  color: var(--red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+.fav-heart svg { width: 11px; height: 11px; }
   border-radius: var(--radius-sm);
   background: var(--gray-light);
   font-size: 0.68rem;
@@ -660,6 +678,7 @@ main {
 .plant-group-header {
   grid-column: 1 / -1;
   font-size: 0.85rem;
+  position: relative;   /* якорь для значка-сердца: сам кружок обрезает по кругу */
   font-weight: 700;
   color: var(--sage-dark);
   padding: 10px 2px 4px;
@@ -1743,8 +1762,9 @@ body.dark .toast-msg { color: #A5C9AA; }
 body.dark .plants-search-input { background: #252522; color: #E8E5DF; border-color: #343330; }
 body.dark .problem-chip-card { background: #2A1800; color: #FFAB40; }
 body.dark .plant-flowering-badge { background: rgba(100, 20, 50, 0.85); color: #FFAAC4; }
-body.dark .card-heart-btn { background: rgba(28,28,26,0.88); }
-body.dark .card-heart-btn:hover { background: rgba(40,40,38,0.98); }
+body.dark .card-heart-btn { background: rgba(42,40,35,0.88); }
+body.dark .card-heart-btn:hover { background: rgba(58,55,48,0.98); }
+body.dark .fav-heart { background: rgba(42,40,35,0.9); }
 body.dark .cutting-status.rooting { background: #0D2137; color: #90CAF9; }
 body.dark .cutting-status.rooted { background: #162A1A; color: #8CC697; }
 body.dark .cutting-status.planted { background: #1A2C1E; color: #A5C9AA; }
