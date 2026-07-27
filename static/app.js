@@ -2665,11 +2665,10 @@ function buildArchiveCard(plant) {
   card.appendChild(body);
 
   const actions = document.createElement('div');
-  actions.style.cssText = 'display:flex;gap:8px;padding:0 16px 14px;';
+  actions.className = 'archive-card-actions';
 
   const restoreBtn = document.createElement('button');
   restoreBtn.className = 'btn-primary';
-  restoreBtn.style.flex = '1';
   restoreBtn.textContent = '↩ Восстановить';
   restoreBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
@@ -2683,7 +2682,6 @@ function buildArchiveCard(plant) {
 
   const delBtn = document.createElement('button');
   delBtn.className = 'btn-danger';
-  delBtn.style.flex = '1';
   delBtn.textContent = '🗑 Удалить';
   delBtn.addEventListener('click', async (e) => {
     e.stopPropagation();

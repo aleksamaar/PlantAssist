@@ -1520,6 +1520,24 @@ body.dark .stats-list-row { background: #1C1C1A; }
 }
 
 /* ── Archive ──────────────────────────────────────────────────────────────── */
+/* Две кнопки в ряд. min-width:0 обязателен: по умолчанию у flex-элемента
+   min-width:auto, поэтому кнопка не ужимается уже своего текста и вылезает
+   за карточку. Поля и кегль тоже поджаты — карточка бывает всего 210px. */
+.archive-card-actions {
+  display: flex;
+  flex-wrap: wrap;      /* в узкой карточке кнопки встают в столбик, а не режутся */
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+.archive-card-actions > button {
+  /* 118px — ширина, при которой «↩ Восстановить» ещё читается целиком.
+     Не влезли вдвоём — переносятся и занимают всю ширину карточки. */
+  flex: 1 1 118px;
+  min-width: 0;
+  justify-content: center;
+  padding: 9px 8px;
+  font-size: 0.8rem;
+}
 .archive-card-reason { font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; font-style: italic; }
 .archive-card-date { font-size: 0.75rem; color: var(--text-muted); }
 
