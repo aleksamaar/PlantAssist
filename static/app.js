@@ -711,17 +711,24 @@ function hasOverdueTasks(plant) {
 // Срок следующего действия, а не дата последнего: частоты у растений разные, и
 // «полили 25 дней назад» с циклом 60 дней вовсе не срочнее, чем «20 дней назад»
 // с циклом 14.
+// Пустой ключ означает «срока нет вовсе» — такие уходят в конец списка.
+// '0000-01-01' — наоборот, «ждёт с самого начала»: расписание есть, а отметок нет.
 function sortKeyFor(plant, section) {
   if (section === 'repotting') {
-    // У пересадки нет frequency_days — фиксированный год.
-    return plant.repotting?.last_date ? addDays(plant.repotting.last_date, 365) : '';
+    const last = plant.repotting?.last_date;
+    if (last) return addDays(last, 365);
+    // Ни разу не пересаживали: считаем от покупки — растение в магазинном грунте
+    // через год просится в новый. Иначе такие проваливались в конец списка.
+    return plant.purchased_date ? addDays(plant.purchased_date, 365) : '';
   }
-  const due = nextDate(plant[section] || {});
-  if (section !== 'fertilizing') return due || '';
-  // Разовое напоминание может стоять раньше обычного цикла.
-  const reminder = plant.fertilizing_reminder_date || '';
-  if (due && reminder) return due < reminder ? due : reminder;
-  return due || reminder || '';
+
+  const sec = plant[section] || {};
+  const reminder = section === 'fertilizing' ? (plant.fertilizing_reminder_date || '') : '';
+  if (!sec.frequency_days) return reminder;      // расписания нет — только разовое
+  if (!sec.last_date) return reminder || '0000-01-01';
+
+  const due = addDays(sec.last_date, sec.frequency_days);
+  return reminder && reminder < due ? reminder : due;
 }
 
 function sortedBySection(arr, section) {
@@ -738,7 +745,10 @@ function sortedBySection(arr, section) {
   // первыми в списке «кому нужен уход» бессмысленно.
   const muted = p => (section === 'watering' && isWateringMuted(p))
                   || (section === 'fertilizing' && isFertilizingMuted(p));
+  // Галочка «нужна пересадка» стоит выше любых расчётных сроков.
+  const flagged = p => section === 'repotting' && !!p.needs_repotting;
   return [...arr].sort((a, b) => {
+    if (flagged(a) !== flagged(b)) return flagged(a) ? -1 : 1;
     if (muted(a) !== muted(b)) return muted(a) ? 1 : -1;
     const aD = sortKeyFor(a, section), bD = sortKeyFor(b, section);
     if (!aD && !bD) return 0;
