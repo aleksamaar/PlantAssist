@@ -708,14 +708,43 @@ function hasOverdueTasks(plant) {
 }
 
 // ─ All plants view ─────────────────────────────────────────────────────────────
+// Срок следующего действия, а не дата последнего: частоты у растений разные, и
+// «полили 25 дней назад» с циклом 60 дней вовсе не срочнее, чем «20 дней назад»
+// с циклом 14.
+function sortKeyFor(plant, section) {
+  if (section === 'repotting') {
+    // У пересадки нет frequency_days — фиксированный год.
+    return plant.repotting?.last_date ? addDays(plant.repotting.last_date, 365) : '';
+  }
+  const due = nextDate(plant[section] || {});
+  if (section !== 'fertilizing') return due || '';
+  // Разовое напоминание может стоять раньше обычного цикла.
+  const reminder = plant.fertilizing_reminder_date || '';
+  if (due && reminder) return due < reminder ? due : reminder;
+  return due || reminder || '';
+}
+
 function sortedBySection(arr, section) {
+  if (section === 'purchased_date') {
+    return [...arr].sort((a, b) => {
+      const aD = a.purchased_date || '', bD = b.purchased_date || '';
+      if (!aD && !bD) return 0;
+      if (!aD) return 1;
+      if (!bD) return -1;
+      return bD.localeCompare(aD);   // новые сверху
+    });
+  }
+  // Заглушённые напоминания уходят вниз: их срок не наступает, показывать их
+  // первыми в списке «кому нужен уход» бессмысленно.
+  const muted = p => (section === 'watering' && isWateringMuted(p))
+                  || (section === 'fertilizing' && isFertilizingMuted(p));
   return [...arr].sort((a, b) => {
-    const aDate = section === 'purchased_date' ? (a.purchased_date || '') : (a[section]?.last_date || '');
-    const bDate = section === 'purchased_date' ? (b.purchased_date || '') : (b[section]?.last_date || '');
-    if (!aDate && !bDate) return 0;
-    if (!aDate) return 1;
-    if (!bDate) return -1;
-    return section === 'purchased_date' ? bDate.localeCompare(aDate) : aDate.localeCompare(bDate);
+    if (muted(a) !== muted(b)) return muted(a) ? 1 : -1;
+    const aD = sortKeyFor(a, section), bD = sortKeyFor(b, section);
+    if (!aD && !bD) return 0;
+    if (!aD) return 1;            // без срока — в конец
+    if (!bD) return -1;
+    return aD.localeCompare(bD);  // ближайший срок сверху
   });
 }
 
