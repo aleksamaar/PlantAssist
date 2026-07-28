@@ -259,7 +259,9 @@
             </div>
             <div class="form-group">
               <label>Стоимость, ₽</label>
-              <input type="number" id="form-price" min="0" step="1" inputmode="decimal" placeholder="например, 1200">
+              <!-- step="any": сервер принимает копейки, при step="1" браузер
+                   не даёт отправить форму с 1200.50 -->
+              <input type="number" id="form-price" min="0" step="any" inputmode="decimal" placeholder="например, 1200">
             </div>
           </div>
           <div class="form-row">

@@ -1705,10 +1705,12 @@ body.dark .cal-table tbody tr:nth-child(even) .cal-td-plant { background: var(--
   .stat-card-wide, .stat-card-accent { grid-column: span 2; }
 }
 /* Status never rides on color alone — the dot always sits next to a word */
-.status-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
-.status-dot.good     { background: #0ca30c; }
-.status-dot.warning  { background: #fab219; }
-.status-dot.critical { background: #d03b3b; }
+/* Только точка внутри плитки: глобальный .status-dot принадлежит карточке
+   растения (7px) и переопределять его отсюда нельзя. */
+.stat-card-note .status-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.stat-card-note .status-dot.good     { background: #0ca30c; }
+.stat-card-note .status-dot.warning  { background: #fab219; }
+.stat-card-note .status-dot.critical { background: #d03b3b; }
 .kpi-delta { font-size: 0.7rem; font-weight: 700; }
 .kpi-delta.good { color: #006300; }
 .kpi-delta.bad  { color: #b3302f; }
@@ -1783,7 +1785,7 @@ body.dark {
   --white:       #2A2823;
   --gray-light:  #332F27;
   --border:      #3D392F;
-  --gray:        var(--gray);
+  --gray:        #6E6A62;
   --text:        #D9D4C7;
   --text-muted:  #948C7C;
 

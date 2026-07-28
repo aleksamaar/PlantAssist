@@ -3933,9 +3933,14 @@ function _sectionTracked(plant, section) {
   return true;
 }
 
-// Completed intervals in the window, plus the still-open one (last action → today).
+// Completed intervals inside the window, plus the interval still open at its end.
 // The open interval is what makes a forgotten plant show up at all: without it,
 // a plant nobody touched would simply contribute nothing to the score.
+//
+// It is measured for ANY window, not just the current one. Gating it on
+// `to === today()` gave the current period one extra event per plant while the
+// previous period had none, so the ↑/↓ against the previous period moved even
+// when care had not changed.
 function _careEvents(plant, section, from, to) {
   if (!_sectionTracked(plant, section)) return [];
   const limit = plant[section].frequency_days * CARE_TOLERANCE;
@@ -3945,8 +3950,11 @@ function _careEvents(plant, section, from, to) {
     if (dates[i] < from || dates[i] > to) continue;
     events.push(_daysBetween(dates[i - 1], dates[i]) <= limit);
   }
-  const last = dates[dates.length - 1] || plant[section].last_date;
-  if (last && to === today()) events.push(_daysBetween(last, to) <= limit);
+  const before = dates.filter(d => d <= to);
+  const fallback = plant[section].last_date;
+  const last = before[before.length - 1]
+    || (fallback && fallback <= to ? fallback : '');
+  if (last) events.push(_daysBetween(last, to) <= limit);
   return events;
 }
 
