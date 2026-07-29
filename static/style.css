@@ -1456,14 +1456,14 @@ body.dark .cal-table tbody tr:nth-child(even) .cal-td-plant { background: var(--
 
 .achievements-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 14px;
   margin-bottom: 28px;
 }
 .achievement-card {
   background: var(--white);
   border-radius: var(--radius);
-  padding: 14px 10px 12px;
+  padding: 18px 12px 14px;
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -1486,35 +1486,42 @@ body.dark .cal-table tbody tr:nth-child(even) .cal-td-plant { background: var(--
   filter: grayscale(0.8);
 }
 .achievement-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
+  width: 104px;
+  height: 104px;
+  border-radius: 26px;
   background: var(--sage-light);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.7rem;
-  margin-bottom: 2px;
+  font-size: 3rem;
+  margin-bottom: 4px;
   overflow: hidden;
 }
+/* У нарисованной иллюстрации свой круг с прозрачным фоном — плитка под ней
+   не нужна, иначе получается квадрат внутри квадрата. */
+.achievement-icon.has-img { background: transparent; border-radius: 50%; }
 .achievement-icon img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  border-radius: 12px;
+  object-fit: contain;
 }
+.achievement-card.viewable { cursor: zoom-in; }
+.achievement-card.viewable:hover .achievement-icon img { transform: scale(1.05); }
+.achievement-icon img { transition: transform 0.18s ease; }
 .achievement-card.locked .achievement-icon { background: var(--gray-light); }
 .achievement-card.unlocked .achievement-icon { background: var(--sage-light); }
+.achievement-card .achievement-icon.has-img,
+.achievement-card.locked .achievement-icon.has-img { background: transparent; }
 .achievement-name {
-  font-size: 0.75rem;
+  font-size: 0.88rem;
   font-weight: 700;
   color: var(--text);
   line-height: 1.25;
 }
 .achievement-desc {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
-  line-height: 1.3;
+  line-height: 1.35;
 }
 .achievement-cat-pill {
   font-size: 0.6rem;
@@ -1546,6 +1553,53 @@ body.dark .cal-table tbody tr:nth-child(even) .cal-td-plant { background: var(--
 }
 
 /* Unlock toast — drops in from the top so the mobile bottom nav stays clear */
+/* ── Просмотр иллюстрации достижения ──────────────────────────────────────── */
+.achievement-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 24px;
+  background: rgba(20, 18, 15, 0.82);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 0.22s ease;
+  cursor: zoom-out;
+}
+.achievement-viewer.in { opacity: 1; }
+.achievement-viewer img {
+  max-width: min(560px, 88vw);
+  max-height: 62vh;
+  object-fit: contain;
+  cursor: default;
+  transform: scale(0.94);
+  transition: transform 0.22s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.achievement-viewer.in img { transform: scale(1); }
+.achievement-viewer-caption { text-align: center; max-width: 460px; cursor: default; }
+.achievement-viewer-name { font-size: 1.25rem; font-weight: 800; color: #fff; letter-spacing: -0.3px; }
+.achievement-viewer-desc { font-size: 0.9rem; color: rgba(255,255,255,0.78); margin-top: 6px; line-height: 1.45; }
+.achievement-viewer-date { font-size: 0.78rem; color: #A8C29B; margin-top: 10px; font-weight: 600; }
+.achievement-viewer-close {
+  position: absolute;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.14);
+  color: #fff;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.achievement-viewer-close:hover { background: rgba(255,255,255,0.24); }
+
 .achievement-toast {
   position: fixed;
   top: calc(14px + env(safe-area-inset-top, 0px));
@@ -1577,7 +1631,9 @@ body.dark .cal-table tbody tr:nth-child(even) .cal-td-plant { background: var(--
   align-items: center;
   justify-content: center;
   font-size: 1.5rem;
+  overflow: hidden;
 }
+.achievement-toast-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
 .achievement-toast-kicker {
   font-size: 0.6rem;
   font-weight: 700;
@@ -2324,7 +2380,14 @@ body.dark .sheet-item { background: var(--gray-light); }
   .cal-kpi-chip { flex: 0 0 auto; min-width: 132px; }
   .sort-btn, .type-filter-btn { flex: 0 0 auto; }
 
-  .achievements-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  /* Две колонки, а не три: с нарисованной иллюстрацией в три карточка
+     становится теснее самой картинки. */
+  .achievements-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .achievement-card { padding: 14px 10px 12px; }
+  .achievement-icon { width: 88px; height: 88px; border-radius: 22px; font-size: 2.4rem; }
+  .achievement-name { font-size: 0.82rem; }
+  .achievement-desc { font-size: 0.68rem; }
+  .achievement-viewer img { max-height: 52vh; }
   .today-plant { padding: 12px; }
   .toast-card { padding: 28px 32px !important; min-width: 220px !important; }
 }
@@ -2332,7 +2395,7 @@ body.dark .sheet-item { background: var(--gray-light); }
 /* Very small phones */
 @media (max-width: 380px) {
   .sidebar-nav-btn .nav-label, .nav-more-btn .nav-label { font-size: 0.56rem; }
-  .achievements-grid { grid-template-columns: repeat(2, 1fr); }
+  .achievement-icon { width: 76px; height: 76px; border-radius: 20px; font-size: 2rem; }
   .plants-grid { gap: 10px; }
 }
 

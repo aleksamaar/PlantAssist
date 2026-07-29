@@ -65,15 +65,17 @@ function _floweringEver() {
 
 const ACHIEVEMENTS = [
   // Коллекция
-  { id: 'garden_1',   cat: '🌿 Коллекция', icon: '🌱', name: 'Первый росток',          desc: 'Добавила первое растение',              check: () => plants.length >= 1 },
-  { id: 'garden_5',   cat: '🌿 Коллекция', icon: '🪴', name: 'Маленький сад',          desc: '5 растений в коллекции',                check: () => plants.length >= 5 },
-  { id: 'garden_10',  cat: '🌿 Коллекция', icon: '🌿', name: 'Зелёный уголок',         desc: '10 растений',                           check: () => plants.length >= 10 },
-  { id: 'garden_20',  cat: '🌿 Коллекция', icon: '🌳', name: 'Настоящий сад',          desc: '20 растений',                           check: () => plants.length >= 20 },
-  { id: 'garden_35',  cat: '🌿 Коллекция', icon: '🌴', name: 'Оранжерея',              desc: '35 растений — ты живёшь в лесу',        check: () => plants.length >= 35 },
-  { id: 'garden_50',  cat: '🌿 Коллекция', icon: '🏡', name: 'Джунгли',                desc: '50 растений — людей уже не видно',      check: () => plants.length >= 50 },
-  { id: 'garden_75',  cat: '🌿 Коллекция', icon: '🌾', name: 'Ботанический сад',       desc: '75 растений',                           check: () => plants.length >= 75 },
-  { id: 'garden_100', cat: '🌿 Коллекция', icon: '💯', name: 'Сотня',                  desc: '100 растений. Ты ок?',                  check: () => plants.length >= 100 },
-  { id: 'garden_150', cat: '🌿 Коллекция', icon: '🏆', name: 'Легенда',                desc: '150 растений — это уже не квартира',    check: () => plants.length >= 150 },
+  // img — нарисованная иконка вместо эмодзи, imgLarge — версия для просмотра по клику.
+  // Файла нет — молча показывается icon, поэтому картинки можно добавлять по одной.
+  { id: 'garden_1',   cat: '🌿 Коллекция', icon: '🌱', img: 'icons/achievements/garden_1.webp',  imgLarge: 'icons/achievements/garden_1-lg.webp',  name: 'Первый росток',  desc: 'Добавила первое растение', check: () => plants.length >= 1 },
+  { id: 'garden_5',   cat: '🌿 Коллекция', icon: '🪴', img: 'icons/achievements/garden_5.webp',  imgLarge: 'icons/achievements/garden_5-lg.webp',  name: 'Маленький сад',  desc: '5 растений в коллекции',   check: () => plants.length >= 5 },
+  { id: 'garden_10',  cat: '🌿 Коллекция', icon: '🌿', img: 'icons/achievements/garden_10.webp', imgLarge: 'icons/achievements/garden_10-lg.webp', name: 'Зелёный уголок', desc: '10 растений',              check: () => plants.length >= 10 },
+  { id: 'garden_20',  cat: '🌿 Коллекция', icon: '🌳', img: 'icons/achievements/garden_20.webp', imgLarge: 'icons/achievements/garden_20-lg.webp', name: 'Настоящий сад', desc: '20 растений',              check: () => plants.length >= 20 },
+  { id: 'garden_35',  cat: '🌿 Коллекция', icon: '🌴', img: 'icons/achievements/garden_35.webp', imgLarge: 'icons/achievements/garden_35-lg.webp', name: 'Оранжерея', desc: '35 растений — ты живёшь в лесу',   check: () => plants.length >= 35 },
+  { id: 'garden_50',  cat: '🌿 Коллекция', icon: '🏡', img: 'icons/achievements/garden_50.webp', imgLarge: 'icons/achievements/garden_50-lg.webp', name: 'Джунгли',   desc: '50 растений — людей уже не видно', check: () => plants.length >= 50 },
+  { id: 'garden_75',  cat: '🌿 Коллекция', icon: '🌾', img: 'icons/achievements/garden_75.webp',  imgLarge: 'icons/achievements/garden_75-lg.webp',  name: 'Ботанический сад', desc: '75 растений',                        check: () => plants.length >= 75 },
+  { id: 'garden_100', cat: '🌿 Коллекция', icon: '💯', img: 'icons/achievements/garden_100.webp', imgLarge: 'icons/achievements/garden_100-lg.webp', name: 'Сотня',            desc: '100 растений. Ты ок?',               check: () => plants.length >= 100 },
+  { id: 'garden_150', cat: '🌿 Коллекция', icon: '🏆', img: 'icons/achievements/garden_150.webp', imgLarge: 'icons/achievements/garden_150-lg.webp', name: 'Легенда',          desc: '150 растений — это уже не квартира', check: () => plants.length >= 150 },
 
   // Полив
   { id: 'water_1',    cat: '💧 Полив', icon: '💧', name: 'Первый полив',     desc: 'Отметила первый полив',       check: () => _totalHistory('watering') >= 1 },
@@ -3807,6 +3809,80 @@ function queueAchievementToast(achievement) {
   _drainAchievementQueue();
 }
 
+// Просмотр иллюстрации достижения во весь экран.
+function openAchievementImage(a, earnedOn) {
+  const overlay = document.createElement('div');
+  overlay.className = 'achievement-viewer';
+  overlay.innerHTML = `
+    <button class="achievement-viewer-close" aria-label="Закрыть">&times;</button>
+    <img src="${a.imgLarge}" alt="${a.name}">
+    <div class="achievement-viewer-caption">
+      <div class="achievement-viewer-name">${a.name}</div>
+      <div class="achievement-viewer-desc">${a.desc}</div>
+      ${earnedOn ? `<div class="achievement-viewer-date">${_fmtEarned(earnedOn)}</div>` : ''}
+    </div>`;
+
+  const close = () => {
+    overlay.classList.remove('in');
+    document.removeEventListener('keydown', onKey);
+    setTimeout(() => overlay.remove(), 220);
+  };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+
+  // Клик мимо картинки закрывает, по самой картинке — нет.
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay || e.target.closest('.achievement-viewer-close')) close();
+  });
+  document.addEventListener('keydown', onKey);
+
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('in'));
+}
+
+// Нарисованная иконка, если она есть; если файл не загрузился — эмодзи.
+// Так можно подставлять картинки по одной, ничего не ломая.
+function achievementIcon(a) {
+  if (!a.img) return a.icon;
+  return `<img src="${a.img}" alt="" loading="lazy"
+    onerror="this.replaceWith(document.createTextNode('${a.icon}'))">`;
+}
+
+// На экране 71 карточка, и картинок будет столько же. Грузить их все сразу —
+// это мегабайты ради того, что не видно, поэтому <img> создаётся только когда
+// карточка подошла к экрану. До этого в плитке лежит эмодзи.
+let _achIconObserver = null;
+
+function observeAchievementIcons(root) {
+  const targets = root.querySelectorAll('.achievement-icon[data-img]');
+  if (!targets.length) return;
+
+  if (!('IntersectionObserver' in window)) {   // очень старый браузер — грузим сразу
+    targets.forEach(swapAchievementIcon);
+    return;
+  }
+  if (_achIconObserver) _achIconObserver.disconnect();
+  _achIconObserver = new IntersectionObserver((entries, obs) => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      obs.unobserve(e.target);
+      swapAchievementIcon(e.target);
+    });
+  }, { rootMargin: '400px' });   // с запасом, чтобы не мигало при прокрутке
+
+  targets.forEach(el => _achIconObserver.observe(el));
+}
+
+function swapAchievementIcon(el) {
+  const src = el.dataset.img;
+  if (!src) return;
+  delete el.dataset.img;
+  const img = new Image();
+  img.alt = '';
+  // Эмодзи остаётся, пока картинка не загрузилась, и навсегда — если не загрузится.
+  img.onload = () => { el.textContent = ''; el.appendChild(img); el.classList.add('has-img'); };
+  img.src = src;
+}
+
 function _drainAchievementQueue() {
   if (_achievementShowing || !_achievementQueue.length) return;
   _achievementShowing = true;
@@ -3815,7 +3891,7 @@ function _drainAchievementQueue() {
   const card = document.createElement('div');
   card.className = 'achievement-toast';
   card.innerHTML = `
-    <div class="achievement-toast-icon">${a.icon}</div>
+    <div class="achievement-toast-icon">${achievementIcon(a)}</div>
     <div>
       <div class="achievement-toast-kicker">Достижение получено</div>
       <div class="achievement-toast-name">${a.name}</div>
@@ -3891,17 +3967,24 @@ async function renderAchievements() {
       const earnedOn = isUnlocked ? unlockedAchievements[a.id] : null;
       card.innerHTML = `
         ${isUnlocked ? '<div class="achievement-unlocked-badge">✓</div>' : ''}
-        <div class="achievement-icon">${a.icon}</div>
+        <div class="achievement-icon"${a.img ? ` data-img="${a.img}"` : ''}>${a.icon}</div>
         <div class="achievement-name">${a.name}</div>
         <div class="achievement-desc">${a.desc}</div>
         ${earnedOn ? `<div class="achievement-date">${_fmtEarned(earnedOn)}</div>` : ''}
       `;
+      // Нарисованную картинку можно открыть крупно и рассмотреть.
+      if (a.imgLarge) {
+        card.classList.add('viewable');
+        card.addEventListener('click', () => openAchievementImage(a, earnedOn));
+      }
       grid.appendChild(card);
     });
 
     section.appendChild(grid);
     container.appendChild(section);
   });
+
+  observeAchievementIcons(container);
 }
 
 // Colours come from the design tokens in style.css so the charts follow the theme
