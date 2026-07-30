@@ -717,11 +717,8 @@ function hasOverdueTasks(plant) {
 // '0000-01-01' — наоборот, «ждёт с самого начала»: расписание есть, а отметок нет.
 function sortKeyFor(plant, section) {
   if (section === 'repotting') {
-    const last = plant.repotting?.last_date;
-    if (last) return addDays(last, 365);
-    // Ни разу не пересаживали: считаем от покупки — растение в магазинном грунте
-    // через год просится в новый. Иначе такие проваливались в конец списка.
-    return plant.purchased_date ? addDays(plant.purchased_date, 365) : '';
+    // У пересадки свой порядок — см. sortedBySection.
+    return plant.repotting?.last_date || '';
   }
 
   const sec = plant[section] || {};
@@ -743,14 +740,30 @@ function sortedBySection(arr, section) {
       return bD.localeCompare(aD);   // новые сверху
     });
   }
+  // Пересадка идёт тремя блоками, а не по одному расчётному сроку:
+  //   1) помеченные галочкой «нужна пересадка»,
+  //   2) те, кого ни разу не пересаживали,
+  //   3) остальные по дате пересадки — от самой давней к самой свежей.
+  // Внутри первых двух блоков — сначала те, что куплены раньше.
+  if (section === 'repotting') {
+    const rank = p => (p.needs_repotting ? 0 : (p.repotting?.last_date ? 2 : 1));
+    return [...arr].sort((a, b) => {
+      const ra = rank(a), rb = rank(b);
+      if (ra !== rb) return ra - rb;
+      if (ra === 2) return a.repotting.last_date.localeCompare(b.repotting.last_date);
+      const aP = a.purchased_date || '', bP = b.purchased_date || '';
+      if (!aP && !bP) return 0;
+      if (!aP) return 1;
+      if (!bP) return -1;
+      return aP.localeCompare(bP);
+    });
+  }
+
   // Заглушённые напоминания уходят вниз: их срок не наступает, показывать их
   // первыми в списке «кому нужен уход» бессмысленно.
   const muted = p => (section === 'watering' && isWateringMuted(p))
                   || (section === 'fertilizing' && isFertilizingMuted(p));
-  // Галочка «нужна пересадка» стоит выше любых расчётных сроков.
-  const flagged = p => section === 'repotting' && !!p.needs_repotting;
   return [...arr].sort((a, b) => {
-    if (flagged(a) !== flagged(b)) return flagged(a) ? -1 : 1;
     if (muted(a) !== muted(b)) return muted(a) ? 1 : -1;
     const aD = sortKeyFor(a, section), bD = sortKeyFor(b, section);
     if (!aD && !bD) return 0;
